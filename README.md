@@ -92,3 +92,7 @@ Same as SAT Daily Ten, no framework, no build step: `index.html` (the whole app)
 - Known cards are saved per deck in the `cards` collection ({ known: [ids] }) and fill in green on the map. Each new known card = +1 star. "Still learning" brings the card back a few cards later.
 
 > 2026-11-07: this project was moved to the **hademolab** Pro team for about 2 weeks (Ha's choice, more deploys). Its Blob store stays on the old team (hanguyen-8346s-projects) and keeps working through the copied BLOB_READ_WRITE_TOKEN. To move back: Vercel → project → Settings → General → Transfer, then set .vercel/project.json orgId back to team_OrD5suyt6yUuAG4L8IubXbrH and deploy with --scope hanguyen-8346s-projects.
+
+## "Did you know?" and longer geography lessons
+- After a right answer about a state, country, flag, continent, or single coin, a "Did you know?" card shows more (capital, nickname, region, language, a fun fact) and the voice reads the fact. `factFor()` in index.html; fact banks STATE_FACT (50), COUNTRY_FACT (65, [language, fact]), CONT_MORE, COIN_FACT.
+- Geography lessons are tours built from the same banks: "Our country" (Level 1 and 50 States topic) has 14 pages; each region lesson visits every state in it; country and flag lessons visit up to 10 countries per continent (TOUR); capitals and nicknames tours have 10-12 states.

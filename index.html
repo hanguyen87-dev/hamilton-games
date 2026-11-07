@@ -71,6 +71,8 @@ h2 { font-size: 1.3rem; margin: 0 0 10px; }
 .dots i.on { background: var(--sun); }
 .dots i.ok { background: var(--good); }
 .dots i.cur { outline: 3px solid var(--brand); outline-offset: 2px; }
+.dots.many { gap: 4px; flex-wrap: wrap; }
+.dots.many i { width: 10px; height: 10px; }
 .prompt { font-size: clamp(1.6rem, 6.5vw, 2.1rem); font-weight: 800; text-align: center; margin: 4px 0 10px; line-height: 1.15; text-wrap: balance; }
 .pic { display: grid; place-items: center; margin: 0 auto 14px; min-height: 60px; }
 .choices { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
@@ -305,6 +307,12 @@ button.fcard { cursor: pointer; }
 .fcard.flipin { animation: flipin .2s ease-out; }
 @keyframes flipin { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 .fbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* "Did you know?" card after a right answer */
+.fact { background: var(--sky-soft); border: 2px solid var(--sky); border-radius: 18px; padding: 12px 16px; margin: 4px 0 14px; display: grid; gap: 2px; text-align: center; }
+.fact > b { color: var(--sky); font-size: .95rem; }
+.fact .ft { font-size: 1.4rem; font-weight: 800; }
+.fact span { font-size: 1.02rem; color: var(--muted); font-weight: 700; }
+.fact p { margin: 6px 0 0; font-size: 1.15rem; font-weight: 700; }
 /* trophy room */
 .shelf { background: var(--surface); border: 2px solid var(--line); border-radius: 20px; padding: 12px 14px; margin-bottom: 14px; box-shadow: var(--shadow); }
 .shelf h2 { margin: 0 0 8px; font-size: 1.15rem; }
@@ -1634,12 +1642,7 @@ const LEVELS = [
       T.shape("circle", "This is a circle. It's round, like a ball."), T.shape("square", "This is a square. It has 4 sides, all the same."),
       T.shape("triangle", "This is a triangle. It has 3 sides."), T.shape("rectangle", "This is a rectangle. It has 4 sides: 2 long and 2 short.")] },
     { id: "1c", s: "read", t: "Sounds: m, s, a, t", p: { g: "sounds", lv: 1, only: ["letter", "first"] }, slides: () => ["m", "s", "a", "t"].map(T.sound) },
-    { id: "1d", s: "world", t: "Our country", p: { g: "states", lv: 1, only: ["which"] }, data: "states", slides: () => [
-      T.show(usMap(), "This is the United States of America. It has 50 states!"),
-      T.show(`<div class="flagbig">🇺🇸</div>`, "This is the American flag. It has 50 stars, one for each state, and 13 stripes."),
-      T.show(usMap({ hl: GEO.us.states.findIndex((x) => x.abbr === "TX") }), "Texas is a very big state."),
-      T.show(usMap({ hl: GEO.us.states.findIndex((x) => x.abbr === "AK") }), "Alaska is the biggest state of all!"),
-      T.show(usMap({ hl: GEO.us.states.findIndex((x) => x.abbr === "FL") }), "Florida is in the south. It's called the Sunshine State.")] },
+    { id: "1d", s: "world", t: "Our country", p: { g: "states", lv: 1, only: ["which"] }, data: "states", slides: () => usTour() },
   ] },
   { n: 2, em: "🍎", name: "Apple Orchard", lessons: [
     { id: "2a", s: "math", t: "Count to 10", p: { g: "count", lv: 2, only: ["count", "after"] }, slides: () => [
@@ -1679,9 +1682,11 @@ const LEVELS = [
       T.show(coinsPic(["d"], true, 1.8), "This is a dime. It's small, but it's worth 10 cents!"), T.show(coinsPic(["q"], true, 1.8), "This is a quarter. A quarter is worth 25 cents.")] },
     { id: "4c", s: "read", t: "Read words", p: { g: "sounds", lv: 4, only: ["read"] }, slides: () => [T.blend("map"), T.blend("dog"), T.blend("bed"), T.blend("bus")] },
     { id: "4d", s: "world", t: "Flags", p: { g: "flags", lv: 1 }, data: "flags", slides: () => [
-      T.show(`<div class="flagbig">🇺🇸</div>`, "Every country has a flag. This is the flag of the United States."),
-      T.show(`<div class="flagbig">🇨🇦</div>`, "This is Canada's flag. It has a red maple leaf."), T.show(`<div class="flagbig">🇲🇽</div>`, "This is Mexico's flag: green, white, and red, with an eagle."),
-      T.show(`<div class="flagbig">🇯🇵</div>`, "This is Japan's flag. It has a red sun."), T.show(`<div class="flagbig">🇬🇧</div>`, "This is the flag of the United Kingdom.")] },
+      T.show(`<div class="flagbig">🇺🇸</div>`, "Every country has its own flag. Its colors and pictures often tell a story about the country."),
+      flagSlide("US"), T.show(`<div class="flagbig">🇨🇦</div>`, "Canada's flag has a red maple leaf. Maple trees grow all over Canada."),
+      T.show(`<div class="flagbig">🇲🇽</div>`, "Mexico's flag is green, white, and red, with an eagle eating a snake."),
+      T.show(`<div class="flagbig">🇯🇵</div>`, "Japan's flag is a red circle for the sun. Japan is called the Land of the Rising Sun."),
+      flagSlide("GB"), flagSlide("FR"), flagSlide("BR"), flagSlide("CN"), flagSlide("IN")] },
   ] },
   { n: 5, em: "🐝", name: "Busy Bee Garden", lessons: [
     { id: "5a", s: "math", t: "Count to 20", p: { g: "count", lv: 3, only: ["count", "after", "before"] }, slides: () => [
@@ -1694,9 +1699,11 @@ const LEVELS = [
     { id: "5c", s: "read", t: "sh, ch, th", p: { g: "sounds", lv: 5, only: ["letter"] }, slides: () => [
       T.show(`<div class="bigletter">sh ch th</div>`, "Sometimes two letters make one sound!"), ...["sh", "ch", "th"].map(T.sound)] },
     { id: "5d", s: "world", t: "Find the states", p: { g: "states", lv: 2, only: ["find", "which"] }, data: "states", slides: () => [
-      T.show(usMap({ hl: GEO.us.states.findIndex((x) => x.abbr === "CA") }), "California is on the west coast, next to the Pacific Ocean."),
-      T.show(usMap({ hl: GEO.us.states.findIndex((x) => x.abbr === "NY") }), "New York is in the northeast, by the Atlantic Ocean."),
-      T.show(usMap({ hl: GEO.us.states.findIndex((x) => x.abbr === "TX") }), "Texas is in the south. It's the second biggest state.")] },
+      T.show(usMap(), "Let's find some states! Big states are easy to spot. Look at their shapes and where they are."),
+      T.show(hlState("CA"), "California is long and tall, on the west coast next to the Pacific Ocean."), T.show(hlState("TX"), "Texas is huge, in the south, with a pointy bottom."),
+      T.show(hlState("FL"), "Florida sticks down into the ocean in the southeast corner."), T.show(hlState("NY"), "New York is in the northeast, by the Atlantic Ocean."),
+      T.show(hlState("WA"), "Washington is in the top left corner."), T.show(hlState("ME"), "Maine is in the top right corner."),
+      T.show(hlState("CO"), "Colorado is a rectangle in the middle of the West."), T.show(hlState("MI"), "Michigan looks like a mitten, surrounded by the Great Lakes.")] },
   ] },
   { n: 6, em: "🚂", name: "Choo-Choo Station", lessons: [
     { id: "6a", s: "math", t: "Tens and ones", p: { g: "tens", lv: 1 }, slides: () => [
@@ -1710,8 +1717,7 @@ const LEVELS = [
       T.show(`<div class="picword"><div class="flagbig">🐱</div><div class="word"><span class="tile q">?</span><span class="tile">a</span><span class="tile">t</span></div></div>`, "What sound does cat start with? /k/. The missing letter is c!", { clips: [{ ...firstQ("cat"), gap: 0.6 }, firstA("cat", "c")] }),
       T.blend("hat"), T.blend("ten")] },
     { id: "6d", s: "world", t: "Countries", p: { g: "countries", lv: 1, only: ["which"] }, data: "countries", slides: () => [
-      ...[["US", "This is the United States. That's our country!"], ["BR", "This is Brazil, in South America."], ["CN", "This is China, in Asia. More than a billion people live there!"], ["AU", "This is Australia. It's a country and a continent!"]]
-        .map(([iso, text]) => T.show(worldMap({ hl: GEO.world.countries.findIndex((c) => c.iso === iso) }), text))] },
+      T.show(worldMap(), "There are almost 200 countries in the world! Let's meet some big ones."), ...["US", "CA", "MX", "BR", "RU", "CN", "IN", "AU"].map(countrySlide)] },
   ] },
   { n: 7, em: "🏕️", name: "Forest Camp", lessons: [
     { id: "7a", s: "math", t: "Add and take away to 20", p: { g: "add", lv: 5 }, slides: () => [
@@ -1722,8 +1728,9 @@ const LEVELS = [
       T.show(clockSvg(9, 30), "Half past 9. We write it 9:30.")] },
     { id: "7c", s: "read", t: "Read more words", p: { g: "sounds", lv: 5, only: ["read", "word"] }, slides: () => [T.blend("fox"), T.blend("web"), T.blend("jet"), T.blend("mug")] },
     { id: "7d", s: "world", t: "Countries and continents", p: { g: "countries", lv: 3, only: ["continent"] }, data: "countries", slides: () => [
-      ...[["JP", "Japan is in Asia."], ["EG", "Egypt is in Africa. It has the pyramids!"], ["FR", "France is in Europe. Paris is its capital."], ["AR", "Argentina is in South America."]]
-        .map(([iso, text]) => T.show(worldMap({ hl: GEO.world.countries.findIndex((c) => c.iso === iso) }), text))] },
+      T.show(contMap({ all: true }), "Every country is on a continent. Let's see where some countries are!"),
+      ...[["JP", "Asia"], ["EG", "Africa"], ["FR", "Europe"], ["AR", "South America"], ["CA", "North America"], ["KE", "Africa"], ["IT", "Europe"], ["IN", "Asia"]].map(([iso, cont]) => {
+        const c = countryBy(iso); return T.show(hlCountry(iso, false), `${The(c.name)} is in ${cont}. ${COUNTRY_FACT[iso][1]}`); })] },
   ] },
   { n: 8, em: "🐧", name: "Snowy Peak", lessons: [
     { id: "8a", s: "math", t: "Count by 2s, 5s, and 10s", p: { g: "count", lv: 5, only: ["skip"] }, slides: () => [
@@ -1734,9 +1741,7 @@ const LEVELS = [
       T.show(coinsPic(["q", "d"], true, 1.1), "A quarter and a dime: 25, then 35. 35 cents!")] },
     { id: "8c", s: "math", t: "Shapes and sides", p: { g: "shapes", lv: 2, only: ["sides", "name"] }, slides: () => [
       T.shape("triangle", "A triangle has 3 sides and 3 corners."), T.shape("pentagon", "A pentagon has 5 sides."), T.shape("hexagon", "A hexagon has 6 sides, like a honeycomb.")] },
-    { id: "8d", s: "world", t: "State capitals", p: { g: "states", lv: 3, only: ["capital"] }, data: "states", slides: () => [
-      ...[["TX", "Austin is the capital of Texas."], ["FL", "Tallahassee is the capital of Florida."], ["CA", "Sacramento is the capital of California."], ["NY", "Albany is the capital of New York. It's not New York City!"]]
-        .map(([ab, text]) => T.show(usMap({ hl: GEO.us.states.findIndex((x) => x.abbr === ab) }), text))] },
+    { id: "8d", s: "world", t: "State capitals", p: { g: "states", lv: 3, only: ["capital"] }, data: "states", slides: () => capitalTour() },
   ] },
   { n: 9, em: "🏜️", name: "Desert Dunes", lessons: [
     { id: "9a", s: "math", t: "Numbers to 1,000", p: { g: "numbers", lv: 2, only: ["place", "build"] }, slides: () => [
@@ -1981,32 +1986,141 @@ const regionMap = (r) => usMap({ hls: GEO.us.states.map((st, i) => (REGION[st.ab
 const regionNames = (r) => listOf(GEO.us.states.filter((st) => REGION[st.abbr] === r).map((st) => st.name)).replace(", or ", ", and ");
 const contIsos = (cont) => GEO.world.countries.filter((c) => c.cont.includes(cont)).sort((a, b) => b.area - a.area).map((c) => c.iso);
 const LS = (id, s, t, p, slides, data) => ({ id, s, t, p, slides, data });
-function regionLesson(n, r, facts) {
+// Region lessons visit every state in the region: where it is, its capital, and a fact.
+function regionLesson(n, r, intro) {
   return LS(`states.${n}`, "world", `The ${r}`, { g: "states", lv: 5, only: ["which", "find"], opts: { region: r } }, () => [
-    T.show(regionMap(r), `These states are in the ${r}: ${regionNames(r)}.`), ...facts.map(([ab, text]) => T.show(hlState(ab), text))], "states");
+    T.show(regionMap(r), `${intro} It has ${GEO.us.states.filter((st) => REGION[st.abbr] === r).length} states. Let's visit them all!`),
+    ...GEO.us.states.filter((st) => REGION[st.abbr] === r).map((st) => stateSlide(st.abbr))], "states");
 }
 function flagLesson(n, cont, title) {
   return LS(`flags.${n}`, "world", `Flags of ${title || cont}`, { g: "flags", lv: 3, only: ["find", "name"], opts: { cont } }, () => {
-    const isos = contIsos(cont), out = [];
-    for (let i = 0; i < isos.length; i += 4) out.push(T.show(flagRow(isos.slice(i, i + 4)), `Flags from ${title || cont}: ${listOf(isos.slice(i, i + 4).map((iso) => the(GEO.world.countries.find((c) => c.iso === iso).name))).replace(", or ", ", and ")}.`));
-    return out.slice(0, 4);
+    const isos = TOUR[cont] || contIsos(cont);
+    return [T.show(flagRow(isos.slice(0, 4)), `Let's learn the flags of ${title || cont}!`), ...isos.map(flagSlide)];
   }, "flags");
 }
-function countryLesson(n, cont, facts) {
+function countryLesson(n, cont) {
   return LS(`countries.${n}`, "world", `Countries of ${cont}`, { g: "countries", lv: 3, only: ["which"], opts: { cont } }, () => [
-    T.show(contMap({ hl: cont === "Oceania" ? "Australia" : cont }), `Let's meet some countries in ${cont}!`), ...facts.map(([iso, text]) => T.show(hlCountry(iso), text))], "countries");
+    T.show(contMap({ hl: cont === "Oceania" ? "Australia" : cont }), `This is ${cont}. ${CONT_FACT[cont] || ""} Let's meet its countries!`), ...TOUR[cont].map(countrySlide)], "countries");
 }
+const CAPITAL_TOUR = ["TX", "FL", "CA", "NY", "GA", "IL", "PA", "OH", "WA", "CO", "HI", "AK"];
+const capitalTour = () => [T.show(usMap(), "Every state has a capital city. That's where the state's leaders meet and make laws."),
+  ...CAPITAL_TOUR.map((ab) => { const st = stateBy(ab); return T.show(hlState(ab), `The capital of ${st.name} is ${st.capital}.${{ NY: " It's not New York City!", CA: " It's not Los Angeles!", FL: " It's not Miami!", IL: " It's not Chicago!" }[ab] || ""}`); })];
+const NICK_TOUR = ["FL", "TX", "CA", "NY", "GA", "AK", "MN", "VT", "IA", "AZ"];
+// ---------- fact banks ("Did you know?" after a right answer, and the longer geography lessons) ----------
+// One well-known fact per state and per country, written for kids. Countries: [language, fact].
+const STATE_FACT = {
+  AL: "Rockets that took astronauts to the Moon were built in Alabama.", AK: "Alaska is the biggest state, and it has the tallest mountain in North America, Denali.",
+  AZ: "The Grand Canyon is in Arizona.", AR: "Arkansas has a park where you can dig for real diamonds!",
+  CA: "California has more people than any other state, and the tallest trees in the world, the redwoods.", CO: "Colorado is full of tall mountains called the Rocky Mountains.",
+  CT: "The first nuclear submarine, the Nautilus, was built in Connecticut.", DE: "Delaware was the very first state to join the United States.",
+  FL: "Rockets launch into space from Kennedy Space Center in Florida.", GA: "Georgia grows lots of peaches and peanuts.",
+  HI: "Hawaii is made of islands, and some of its volcanoes still erupt.", ID: "Idaho grows more potatoes than any other state.",
+  IL: "Chicago, in Illinois, has some of the tallest buildings in the country.", IN: "Indiana has a famous car race called the Indianapolis 500.",
+  IA: "Iowa grows lots and lots of corn.", KS: "Kansas grows lots of wheat, which is used to make bread.",
+  KY: "Kentucky has Mammoth Cave, the longest cave in the world.", LA: "Louisiana has swamps called bayous, where alligators live.",
+  ME: "Maine catches more lobsters than any other state.", MD: "The words of our national anthem were written in Maryland.",
+  MA: "The Pilgrims' first Thanksgiving was in Massachusetts.", MI: "Michigan is shaped like a mitten, and it touches four of the five Great Lakes.",
+  MN: "Minnesota is called the Land of 10,000 Lakes.", MS: "The big Mississippi River flows along the state of Mississippi.",
+  MO: "Missouri has the Gateway Arch, the tallest arch in the world.", MT: "Montana has Glacier National Park, with real glaciers made of ice.",
+  NE: "Kool-Aid was invented in Nebraska.", NV: "Nevada is the driest state. Most of it is desert.",
+  NH: "Some of the strongest winds ever measured blew on Mount Washington in New Hampshire.", NJ: "Thomas Edison made his famous light bulb in New Jersey.",
+  NM: "New Mexico has a giant hot air balloon festival with hundreds of balloons.", NY: "The Statue of Liberty is in New York.",
+  NC: "The Wright brothers flew the first airplane in North Carolina.", ND: "North Dakota grows lots of sunflowers.",
+  OH: "Neil Armstrong, the first person to walk on the Moon, was from Ohio.", OK: "Oklahoma is in Tornado Alley, where lots of tornadoes happen.",
+  OR: "Oregon has Crater Lake, the deepest lake in the United States.", PA: "The Declaration of Independence was signed in Philadelphia, Pennsylvania.",
+  RI: "Rhode Island is the smallest state.", SC: "South Carolina's flag has a palmetto tree on it.",
+  SD: "Mount Rushmore, with four presidents carved into the rock, is in South Dakota.", TN: "Nashville, Tennessee, is famous for country music.",
+  TX: "Texas is the second biggest state, and it has more cattle than any other state.", UT: "Utah has the Great Salt Lake, which is saltier than the ocean.",
+  VT: "Vermont makes more maple syrup than any other state.", VA: "Eight presidents were born in Virginia, more than in any other state.",
+  WA: "Washington grows more apples than any other state.", WV: "West Virginia is the only state that is all inside the Appalachian Mountains.",
+  WI: "Wisconsin is famous for making cheese.", WY: "Yellowstone, the first national park in the world, is mostly in Wyoming.",
+};
+const COUNTRY_FACT = {
+  US: ["English", "The United States has 50 states."], CA: ["English and French", "Canada is the second biggest country in the world."],
+  MX: ["Spanish", "Mexico has ancient pyramids built long ago by the Maya and the Aztecs."], CU: ["Spanish", "Cuba is an island in the Caribbean Sea."],
+  JM: ["English", "Usain Bolt, the fastest runner ever, is from Jamaica."], PA: ["Spanish", "The Panama Canal lets ships go from the Atlantic Ocean to the Pacific Ocean."],
+  CR: ["Spanish", "Costa Rica has rainforests full of sloths and colorful frogs."], GL: ["Greenlandic", "Greenland is the biggest island in the world, and most of it is covered in ice."],
+  BR: ["Portuguese", "Most of the Amazon rainforest is in Brazil."], AR: ["Spanish", "Argentina has giant waterfalls called Iguazu Falls."],
+  CL: ["Spanish", "Chile is long and thin, and it has one of the driest deserts on Earth."], PE: ["Spanish", "Machu Picchu, an old city high in the mountains, is in Peru."],
+  CO: ["Spanish", "Colombia grows lots of coffee."], VE: ["Spanish", "Venezuela has Angel Falls, the tallest waterfall in the world."],
+  EC: ["Spanish", "Ecuador owns the Galápagos Islands, where giant tortoises live."], BO: ["Spanish", "Bolivia has the biggest salt flat in the world. After rain, it looks like a giant mirror."],
+  UY: ["Spanish", "Uruguay won the very first soccer World Cup, in 1930."], GB: ["English", "London has a famous clock tower with a big bell called Big Ben."],
+  FR: ["French", "The Eiffel Tower is in Paris, France."], DE: ["German", "The first car was built in Germany."],
+  IT: ["Italian", "Pizza and spaghetti come from Italy, and Italy is shaped like a boot!"], ES: ["Spanish", "The Spanish language comes from Spain."],
+  PT: ["Portuguese", "Long ago, explorers from Portugal sailed all around the world."], IE: ["Irish and English", "Ireland is called the Emerald Isle because it's so green."],
+  NL: ["Dutch", "The Netherlands is famous for windmills and tulips."], BE: ["Dutch, French, and German", "Belgium is famous for chocolate and waffles."],
+  CH: ["German, French, and Italian", "Switzerland has the snowy Alps and is famous for watches and cheese."], AT: ["German", "The famous music writer Mozart was born in Austria."],
+  NO: ["Norwegian", "Norway has long, narrow arms of the sea called fjords."], SE: ["Swedish", "Most of the Nobel Prizes are given out in Sweden."],
+  FI: ["Finnish", "Finland has so many lakes, nobody can count them all."], DK: ["Danish", "LEGO bricks were invented in Denmark."],
+  IS: ["Icelandic", "Iceland has volcanoes, glaciers, and hot springs."], PL: ["Polish", "The famous scientist Marie Curie was born in Poland."],
+  GR: ["Greek", "The Olympic Games started long ago in Greece."], UA: ["Ukrainian", "Ukraine is the biggest country that is all in Europe."],
+  RU: ["Russian", "Russia is the biggest country in the world."], TR: ["Turkish", "Turkey is in two continents: Europe and Asia."],
+  CN: ["Chinese", "The Great Wall of China is thousands of miles long, and giant pandas live in China."], JP: ["Japanese", "Japan is made of islands, and its bullet trains are super fast."],
+  KR: ["Korean", "South Korea makes lots of phones, TVs, and cars."], IN: ["Hindi and English", "India has more people than any other country."],
+  VN: ["Vietnamese", "Vietnam grows lots of rice and coffee."], TH: ["Thai", "Thailand is famous for elephants and beautiful temples."],
+  PH: ["Filipino and English", "The Philippines is made of more than 7,000 islands."], ID: ["Indonesian", "Indonesia has more than 17,000 islands."],
+  MY: ["Malay", "Malaysia has the Petronas Towers, two very tall twin buildings."], MN: ["Mongolian", "Many people in Mongolia live in round tents called gers."],
+  PK: ["Urdu and English", "K2, the second tallest mountain in the world, is on Pakistan's border."], SA: ["Arabic", "Saudi Arabia is mostly desert, and it has no rivers that flow all year."],
+  IL: ["Hebrew", "Israel has the Dead Sea. It's so salty that you can float on top!"], IR: ["Persian", "Long ago, Iran was called Persia."],
+  NP: ["Nepali", "Mount Everest, the tallest mountain in the world, is on Nepal's border."], EG: ["Arabic", "Egypt has the pyramids and the Nile, one of the longest rivers in the world."],
+  KE: ["Swahili and English", "People go on safari in Kenya to see lions, zebras, and elephants."], NG: ["English", "Nigeria has more people than any other country in Africa."],
+  ZA: ["English, Zulu, and more", "Penguins live on some beaches in South Africa."], MA: ["Arabic and Berber", "Morocco is so close to Spain, you can see it across the sea."],
+  ET: ["Amharic", "Coffee first came from Ethiopia."], GH: ["English", "Ghana grows lots of cocoa beans, which are used to make chocolate."],
+  MG: ["Malagasy and French", "Lemurs live in the wild only on Madagascar."], TZ: ["Swahili and English", "Mount Kilimanjaro, the tallest mountain in Africa, is in Tanzania."],
+  DZ: ["Arabic", "Algeria is the biggest country in Africa."], AU: ["English", "Kangaroos and koalas live in Australia."],
+  NZ: ["English and Māori", "New Zealand has more sheep than people."],
+};
+const CONT_MORE = { "North America": "It has 23 countries. The biggest one is Canada.", "South America": "It has 12 countries. The biggest one is Brazil.",
+  Europe: "It has about 44 countries.", Africa: "It has 54 countries, more than any other continent.", Asia: "More people live in Asia than on any other continent.",
+  Australia: "It's the smallest continent.", Antarctica: "No country owns Antarctica, and nobody lives there all year." };
+const COIN_FACT = { p: "Pennies are made mostly of zinc, with a thin coat of copper.", n: "A nickel is made of copper and nickel. That's how it got its name!",
+  d: "A dime has 118 tiny ridges around its edge.", q: "A quarter has 119 tiny ridges around its edge." };
+// Countries in the order the lessons visit them (famous ones first).
+const TOUR = { "North America": ["US", "CA", "MX", "CU", "JM", "PA", "CR", "GL"], "South America": ["BR", "AR", "PE", "CO", "CL", "VE", "EC", "BO", "UY"],
+  Europe: ["GB", "FR", "DE", "IT", "ES", "GR", "NL", "IE", "CH", "NO"], Asia: ["CN", "JP", "IN", "KR", "VN", "TH", "PH", "ID", "MN", "NP"],
+  Africa: ["EG", "KE", "ZA", "NG", "MA", "ET", "GH", "MG", "TZ", "DZ"], Oceania: ["AU", "NZ"] };
+const stateBy = (ab) => GEO.us.states.find((x) => x.abbr === ab), countryBy = (iso) => GEO.world.countries.find((c) => c.iso === iso);
+// The "Did you know?" card for a state, country, continent, or coin.
+const stateCard = (st) => ({ title: `🗺️ ${st.name}`, lines: [`Capital: ${st.capital}`, `${st.nick}`, `Region: the ${REGION[st.abbr]}`], fun: STATE_FACT[st.abbr] });
+const countryCard = (c) => ({ title: `${flag(c.iso)} ${c.name}`, lines: [`Capital: ${c.capital}`, `Continent: ${c.cont}`, `Language: ${COUNTRY_FACT[c.iso][0]}`], fun: COUNTRY_FACT[c.iso][1] });
+function factFor(g, q) {
+  if (g === "states") { const st = stateBy(q.key.slice(-2)); return st && stateCard(st); }
+  if (g === "countries" || g === "flags") { const c = countryBy(/^[A-Z]{2}$/.test(q.answer) ? q.answer : q.key.slice(-2)); return c && COUNTRY_FACT[c.iso] && countryCard(c); }
+  if (g === "continents") { const name = q.key.slice(2); return CONT_MORE[name] && { title: `🌎 ${name}`, lines: [CONT_FACT[name]], fun: CONT_MORE[name] }; }
+  const m = g === "coins" && /^(w|n|v|face|facer)([pndq])$/.exec(q.key);
+  if (m) { const k = m[2]; return { title: `🪙 ${cap(COIN[k].name)}`, lines: [`Worth ${cents(COIN[k].v)}`, `${FACE[k]} is on it`], fun: COIN_FACT[k] }; }
+  return null;
+}
+const factHtml = (f) => `<div class="fact"><b>💡 Did you know?</b><div class="ft">${esc(f.title)}</div>${f.lines.map((l) => `<span>${esc(l)}</span>`).join("")}<p>${esc(f.fun)}</p></div>`;
+// Lesson pages built from the banks.
+const stateSlide = (ab) => { const st = stateBy(ab); return T.show(hlState(ab), `This is ${st.name}. Its capital is ${st.capital}. ${STATE_FACT[ab]}`); };
+const countrySlide = (iso) => { const c = countryBy(iso); return T.show(hlCountry(iso), `This is ${the(c.name)}. Its capital is ${c.capital}. ${COUNTRY_FACT[iso][1]}`); };
+const flagSlide = (iso) => { const c = countryBy(iso); return T.show(`<div class="flagbig">${flag(iso)}</div>`, `This is the flag of ${the(c.name)}. Its capital is ${c.capital}. ${COUNTRY_FACT[iso][1]}`); };
+// "Our country": the big tour of the United States (Level 1 and the 50 States topic).
+const usTour = () => [
+  T.show(usMap(), "This is the United States of America. It has 50 states!"),
+  T.show(`<div class="flagbig">🇺🇸</div>`, "This is the American flag. It has 50 stars, one for each state, and 13 stripes for the first 13 states."),
+  T.show(`<div class="flagbig">🏛️</div>`, "The capital of our country is Washington, D.C. The President lives there, in the White House. It isn't in any state!"),
+  T.show(usMap(), "Canada is our neighbor to the north. Mexico is our neighbor to the south."),
+  T.show(usMap(), "The Pacific Ocean is on the west side of our country. The Atlantic Ocean is on the east side."),
+  T.show(usMap({ hls: GEO.us.states.map((x, i) => (["AK", "HI"].includes(x.abbr) ? -1 : i)).filter((i) => i >= 0) }), "48 states are all together in one big piece."),
+  stateSlide("AK"), stateSlide("HI"), stateSlide("TX"), stateSlide("CA"), stateSlide("RI"), stateSlide("FL"), stateSlide("NY"),
+  T.show(usMap(), "Every state has a capital city, where its leaders work. Let's learn them all!")];
+
 const TOPICS = [
   { id: "coins", game: "coins", ico: "🪙", name: "Coins", lessons: [
     LS("coins.1", "math", "Penny and nickel", { g: "coins", lv: 2, only: ["which", "name"] }, () => [
       T.show(coinsPic(["p"], true, 1.8), "This is a penny. It's worth 1 cent. It's copper colored, and Abraham Lincoln is on it."),
       T.show(coinsPic(["n"], true, 1.8), "This is a nickel. It's worth 5 cents. Thomas Jefferson is on it."),
       T.show(coinsPic(["n", "p", "p", "p", "p", "p"], true, 1.1), "A nickel is bigger than a penny, and worth more. 5 pennies make a nickel!"),
+      T.show(coinsPic(["p"], true, 1.8), COIN_FACT.p), T.show(coinsPic(["n"], true, 1.8), COIN_FACT.n),
       T.show(`<div class="flagbig">🏛️</div>`, "Fun fact: the United States made its last new pennies in 2025. The pennies we have still work as money!")]),
     LS("coins.2", "math", "Dime and quarter", { g: "coins", lv: 4, only: ["name", "value"] }, () => [
       T.show(coinsPic(["d"], true, 1.8), "This is a dime. It's worth 10 cents. It's the smallest coin, but it's worth more than a penny or a nickel!"),
       T.show(coinsPic(["q"], true, 1.8), "This is a quarter. It's worth 25 cents."),
-      T.show(coinsPic(["d", "q", "p", "n"], true, 1.2), "Dimes and quarters have tiny ridges all around the edge. Pennies and nickels are smooth.")]),
+      T.show(coinsPic(["d", "q", "p", "n"], true, 1.2), "Dimes and quarters have tiny ridges all around the edge. Pennies and nickels are smooth."),
+      T.show(coinsPic(["d"], true, 1.8), COIN_FACT.d), T.show(coinsPic(["q"], true, 1.8), COIN_FACT.q),
+      T.show(coinsPic(["q", "q", "q", "q"], true, 1.2), "4 quarters make one dollar. That's why it's called a quarter: it's one fourth of a dollar!")]),
     LS("coins.3", "math", "Who is on the coin?", { g: "coins", lv: 3, only: ["face"] }, () => ["p", "n", "d", "q"].map((k) =>
       T.show(coinsPic([k], true, 1.8), `${FACE[k]} is on the ${COIN[k].name}.${k === "d" || k === "q" ? " Some years have special designs, too!" : ""}`))),
     LS("coins.4", "math", "Small but worth more", { g: "coins", lv: 4, only: ["more", "groups"] }, () => [
@@ -2060,20 +2174,17 @@ const TOPICS = [
       T.show(clockSvg(2, 0), "It's 2 o'clock. What time is it 3 hours later? Count the hours: 3, 4, 5. It's 5 o'clock!")]),
   ] },
   { id: "states", game: "states", ico: "🗺️", name: "50 States", lessons: [
-    LS("states.1", "world", "The 50 states", { g: "states", lv: 1, only: ["which"] }, () => [
-      T.show(usMap(), "The United States has 50 states."), T.show(`<div class="flagbig">🏛️</div>`, "The capital of our country is Washington, D.C. It isn't in any state!"),
-      T.show(usMap({ hls: GEO.us.states.map((x, i) => (["AK", "HI"].includes(x.abbr) ? i : -1)).filter((i) => i >= 0) }), "Alaska and Hawaii are far away from the other 48 states.")], "states"),
+    LS("states.1", "world", "The 50 states", { g: "states", lv: 1, only: ["which"] }, () => usTour(), "states"),
     LS("states.2", "world", "The 4 regions", { g: "states", lv: 5, only: ["region"] }, () => [
       T.show(usMap(), "The 50 states are grouped into 4 big parts called regions: the West, the Midwest, the South, and the Northeast."),
       ...Object.keys(REGIONS).map((r) => T.show(regionMap(r), `This is the ${r}.`))], "states"),
-    regionLesson(3, "West", [["CA", "California has more people than any other state."], ["AK", "Alaska is the biggest state."], ["HI", "Hawaii is made of islands in the Pacific Ocean."]]),
-    regionLesson(4, "Midwest", [["IA", "The Midwest is called America's heartland. Lots of corn grows here."], ["MI", "Michigan is shaped like a mitten!"], ["IL", "The big city of Chicago is in Illinois."]]),
-    regionLesson(5, "South", [["TX", "Texas is the biggest state in the South."], ["FL", "Florida has warm beaches and alligators."], ["LA", "New Orleans is in Louisiana."]]),
-    regionLesson(6, "Northeast", [["NY", "New York City is the biggest city in the United States."], ["MA", "Boston, in Massachusetts, is one of the oldest cities in America."], ["ME", "Maine is the state farthest to the northeast."]]),
-    LS("states.7", "world", "State capitals", { g: "states", lv: 3, only: ["capital"] }, () => [["TX", "Austin is the capital of Texas."], ["FL", "Tallahassee is the capital of Florida."],
-      ["CA", "Sacramento is the capital of California."], ["NY", "Albany is the capital of New York. It's not New York City!"]].map(([ab, t]) => T.show(hlState(ab), t)), "states"),
-    LS("states.8", "world", "State nicknames", { g: "states", lv: 5, only: ["nick"] }, () => [["FL", "Florida is the Sunshine State."], ["TX", "Texas is the Lone Star State."],
-      ["CA", "California is the Golden State."], ["NY", "New York is the Empire State."]].map(([ab, t]) => T.show(hlState(ab), t)), "states"),
+    regionLesson(3, "West", "The West has tall mountains, deserts, and the Pacific Ocean."),
+    regionLesson(4, "Midwest", "The Midwest is called America's heartland, with big farms and the Great Lakes."),
+    regionLesson(5, "South", "The South is warm, with beaches, swamps, and lots of farms."),
+    regionLesson(6, "Northeast", "The Northeast has the oldest cities in America, and snowy winters."),
+    LS("states.7", "world", "State capitals", { g: "states", lv: 3, only: ["capital"] }, () => capitalTour(), "states"),
+    LS("states.8", "world", "State nicknames", { g: "states", lv: 5, only: ["nick"] }, () => [T.show(usMap(), "Every state has a nickname. It often tells you something special about the state."),
+      ...NICK_TOUR.map((ab) => { const st = stateBy(ab); return T.show(hlState(ab), `${st.name} is called ${st.nick}.`); })], "states"),
     LS("states.9", "world", "Short names (TX, CA)", { g: "states", lv: 5, only: ["abbr"] }, () => [
       T.show(`<div class="bigtext">TX</div>`, "Every state has a short name with two letters. T X is Texas."), T.show(`<div class="bigtext">CA</div>`, "C A is California."), T.show(`<div class="bigtext">FL</div>`, "F L is Florida.")], "states"),
     LS("states.10", "world", "State shapes", { g: "states", lv: 4, only: ["shape"] }, () => [["TX", "This is Texas. It's big, with a pointy bottom."], ["FL", "This is Florida. It sticks down into the ocean."],
@@ -2093,12 +2204,13 @@ const TOPICS = [
   ] },
   { id: "countries", game: "countries", ico: "🌍", name: "Countries", lessons: [
     LS("countries.1", "world", "Countries and continents", { g: "countries", lv: 3, only: ["continent"] }, () => [
-      T.show(contMap({ all: true }), "Each continent has many countries."), T.show(hlCountry("FR"), "France is a country in Europe."), T.show(hlCountry("KE"), "Kenya is a country in Africa.")], "countries"),
-    countryLesson(2, "North America", [["US", "The United States is our country."], ["CA", "Canada is north of the United States. It's the second biggest country in the world!"], ["MX", "Mexico is south of the United States."]]),
-    countryLesson(3, "South America", [["BR", "Brazil is the biggest country in South America. The Amazon rainforest is there."], ["AR", "Argentina is near the bottom of South America."], ["PE", "Peru has the tall Andes mountains."]]),
-    countryLesson(4, "Europe", [["FR", "France is in Europe. Its capital is Paris."], ["IT", "Italy is shaped like a boot!"], ["GB", "The United Kingdom is on islands."]]),
-    countryLesson(5, "Asia", [["CN", "China has more than a billion people."], ["IN", "India has more than a billion people, too."], ["JP", "Japan is made of islands."]]),
-    countryLesson(6, "Africa", [["EG", "Egypt has the pyramids and the Nile River."], ["KE", "Kenya has lions, zebras, and giraffes."], ["ZA", "South Africa is at the very bottom of Africa."]]),
+      T.show(contMap({ all: true }), "Each continent has many countries. A country has its own leaders, flag, and money."),
+      ...["FR", "KE", "JP", "BR", "CA", "AU"].map((iso) => { const c = countryBy(iso); return T.show(hlCountry(iso, false), `${The(c.name)} is a country in ${c.cont}.`); })], "countries"),
+    countryLesson(2, "North America"),
+    countryLesson(3, "South America"),
+    countryLesson(4, "Europe"),
+    countryLesson(5, "Asia"),
+    countryLesson(6, "Africa"),
     LS("countries.7", "world", "The biggest countries", { g: "countries", lv: 1, only: ["which"] }, () => [["RU", "Russia is the biggest country in the world."], ["CA", "Canada is the second biggest."],
       ["CN", "The United States and China are about the same size. They come next!"], ["BR", "Brazil and Australia are big, too."]].map(([iso, t]) => T.show(hlCountry(iso, false), t)), "countries"),
     LS("countries.8", "world", "Capital cities", { g: "countries", lv: 4, only: ["capital"] }, () => [["FR", "Paris is the capital of France."], ["JP", "Tokyo is the capital of Japan."],
@@ -2135,9 +2247,9 @@ const topicLessons = (t) => t.lessons.map((x) => (typeof x === "string" ? lesson
 const STAR_CARD = 1;
 const DECKS = {
   states: { name: "50 States", ico: "🗺️", data: "states", map: "us", what: "state", items: () => GEO.us.states.map((st, i) => ({ id: st.abbr, i, front: "What state is this?",
-    title: st.name, lines: [`Capital: ${st.capital}`, st.nick, `Region: the ${REGION[st.abbr]}`], say: `${st.name}. The capital is ${st.capital}. ${st.nick}.` })) },
+    title: st.name, lines: [`Capital: ${st.capital}`, st.nick, `Region: the ${REGION[st.abbr]}`, `💡 ${STATE_FACT[st.abbr]}`], say: `${st.name}. The capital is ${st.capital}. ${STATE_FACT[st.abbr]}` })) },
   countries: { name: "Countries of the world", ico: "🌍", data: "countries", map: "world", what: "country", items: () => GEO.world.countries.map((c, i) => ({ id: c.iso, i, front: "What country is this?",
-    title: `${flag(c.iso)} ${c.name}`, lines: [`Capital: ${c.capital}`, `Continent: ${c.cont}`], say: `${The(c.name)}. The capital is ${c.capital}. It's in ${c.cont}.` })) },
+    title: `${flag(c.iso)} ${c.name}`, lines: [`Capital: ${c.capital}`, `Continent: ${c.cont}`, `Language: ${COUNTRY_FACT[c.iso][0]}`, `💡 ${COUNTRY_FACT[c.iso][1]}`], say: `${The(c.name)}. The capital is ${c.capital}. ${COUNTRY_FACT[c.iso][1]}` })) },
   conts: { name: "Continents and oceans", ico: "🌎", data: "continents", map: "conts", what: "continent", items: () => [
     ...GEO.world.conts.map((c, i) => ({ id: c.name, i, front: "What continent is this?", title: c.name, lines: [CONT_FACT[c.name]], say: `${c.name}. ${CONT_FACT[c.name]}` })),
     ...Object.keys(GEO.world.oceans).map((o) => ({ id: o, ocean: o, front: "Which ocean has the star?", title: `${o} Ocean`, lines: [OCEAN_FACT[o]], say: `The ${o} Ocean. ${OCEAN_FACT[o]}` }))] },
@@ -2297,9 +2409,10 @@ async function nextQuestion() {
   for (let k = 0; k < 15; k++) { q = GEN[g](lv, spec.only, spec.opts || {}); if (!r.seen.has(q.key)) break; }
   r.seen.add(q.key);
   Object.assign(q, { g, lv });
+  q.fact = factFor(g, q);
   Object.assign(r, { q, tries: 0, solved: false });
   render();
-  if (q.clips) speak(q.clips, 150); else { say(q.say, 150); preload(q.after); }
+  if (q.clips) speak(q.clips, 150); else { say(q.say, 150); preload(`${q.after || ""} ${q.fact ? "Did you know? " + q.fact.fun : ""}`); }
 }
 function choose(key, el) {
   const r = S.round, q = r && r.q;
@@ -2315,13 +2428,16 @@ function choose(key, el) {
     const praise = pick(PRAISE);
     msg.className = "msg good"; msg.textContent = `${praise} ${q.after || ""}`;
     sfx.good(); confetti();
+    // After a right answer: a "Did you know?" card with more about the state, country, continent, or coin.
+    if (q.fact) { const fb = $("#factbox"); fb.innerHTML = factHtml(q.fact); fb.hidden = false; }
     if (q.clips) speak([lineItem("p-" + PRAISE.indexOf(praise), praise), ...(q.afterClips || [])], 380);
-    else say(`${praise} ${q.after || ""}`, 380, "praise");
+    else say(`${praise} ${q.after || ""}${q.fact ? ` Did you know? ${q.fact.fun}` : ""}`, 380, "praise");
     put("answers", uid(), { g: q.g, d: dayOf(), ok: first, lv: q.lv, t: Date.now(), ...(r.mode === "today" ? { dl: 1 } : {}), ...(r.lesson ? { ls: r.lesson } : {}) });
     const next = $("#nextBtn");
     next.hidden = false;
     next.textContent = r.mode === "place" || r.i + 1 < r.games.length ? "Next ▶" : "Finish 🎉";
     next.focus({ preventScroll: true });
+    if (q.fact) next.scrollIntoView({ block: "nearest", behavior: "smooth" });  // the fact card pushes Next down
     renderDots();
   } else {
     if (q.tap) {
@@ -2484,7 +2600,7 @@ function levelView() {
 function lessonView() {
   const l = S.lesson, [, ls] = lessonById(l.id), sl = l.slides[l.i], last = l.i === l.slides.length - 1;
   const ready = !sl.count || l.tapped.size >= sl.count;
-  return `<div class="playbar"><button class="icon" data-act="quitlesson" aria-label="Stop">✕</button><div class="dots">${l.slides.map((_, i) => `<i class="${i < l.i ? "ok" : ""}${i === l.i ? " cur" : ""}"></i>`).join("")}</div><button class="icon" data-act="hearslide" aria-label="Hear it again">🗣️</button></div>
+  return `<div class="playbar"><button class="icon" data-act="quitlesson" aria-label="Stop">✕</button><div class="dots${l.slides.length > 8 ? " many" : ""}">${l.slides.map((_, i) => `<i class="${i < l.i ? "ok" : ""}${i === l.i ? " cur" : ""}"></i>`).join("")}</div><button class="icon" data-act="hearslide" aria-label="Hear it again">🗣️</button></div>
   <p class="storytitle">${SUBJ[ls.s]} ${esc(ls.t)}</p>
   <div class="slide">${sl.html}</div>
   <p class="cap">${esc(sl.text)}</p>
@@ -2571,6 +2687,7 @@ function playView() {
   ${q.pic ? `<div class="pic" id="pic">${q.pic}</div>` : ""}
   ${choices}
   <p class="msg" aria-live="polite"></p>
+  <div id="factbox" hidden></div>
   <button class="next" id="nextBtn" hidden>Next ▶</button>`;
 }
 function renderDots() {
