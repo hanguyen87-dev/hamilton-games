@@ -1,15 +1,13 @@
-import { get, put } from "@vercel/blob";
-import { waitUntil } from "@vercel/functions";
-import { createHash } from "node:crypto";
 import { getSession, json, sameOrigin } from "../lib/auth.js";
 
 // Game sentences in a Google voice: GET /api/tts?v=warm&t=Great%20job!
-// Each sentence is made once (Google Cloud Text-to-Speech) and kept in the private store as tts/<v>/<hash>.mp3,
-// so after the first time it plays from storage without calling Google. Voices must match READ_SETS in index.html.
+// Made by Google Cloud Text-to-Speech the first time, then kept by Vercel's CDN and the browser (same URL = same audio),
+// so repeats don't call Google. Not saved in Blob: the free plan allows only 2,000 Blob writes a month for all apps.
+// Voices must match READ_SETS in index.html.
 const VOICES = { warm: "en-US-Neural2-F", bright: "en-US-Neural2-H" };
 const RATE = 0.9;
 const MAX_TEXT = 300;
-const AUDIO_HEADERS = { "content-type": "audio/mpeg", "cache-control": "private, max-age=31536000, immutable" };
+const AUDIO_HEADERS = { "content-type": "audio/mpeg", "cache-control": "private, max-age=31536000, immutable", "vercel-cdn-cache-control": "max-age=31536000" };
 
 async function synthesize(text, voice, key) {
   const r = await fetch("https://texttospeech.googleapis.com/v1/text:synthesize", {
@@ -33,15 +31,7 @@ export default {
     const key = process.env.GOOGLE_TTS_KEY;
     if (!key) return json({ error: "No voice key." }, 503);
 
-    const path = `tts/${v}/${createHash("sha256").update(`${VOICES[v]}|${RATE}|${text}`).digest("hex")}.mp3`;
-    try {
-      const saved = await get(path, { access: "private" });
-      if (saved && saved.statusCode === 200) return new Response(saved.stream, { headers: AUDIO_HEADERS });
-    } catch { /* not saved yet */ }
-
-    let audio;
-    try { audio = await synthesize(text, VOICES[v], key); } catch { return json({ error: "Voice service failed." }, 502); }
-    waitUntil(put(path, audio, { access: "private", contentType: "audio/mpeg", addRandomSuffix: false, allowOverwrite: true }).catch(() => {}));
-    return new Response(audio, { headers: AUDIO_HEADERS });
+    try { return new Response(await synthesize(text, VOICES[v], key), { headers: AUDIO_HEADERS }); }
+    catch { return json({ error: "Voice service failed." }, 502); }
   },
 };

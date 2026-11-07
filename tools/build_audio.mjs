@@ -33,7 +33,7 @@ function loadSpecs() {
   const js = html.slice(html.indexOf('<script>\n"use strict";') + 8, html.lastIndexOf("</script>"));
   const dummy = () => new Proxy(function () {}, { get: (t, k) => (k === Symbol.toPrimitive ? () => "" : dummy()), apply: () => dummy(), set: () => true });
   const ctx = { document: dummy(), window: {}, localStorage: { getItem: () => null, setItem() {} }, location: { hostname: "x", search: "" }, matchMedia: () => ({ matches: true }),
-    fetch: () => new Promise(() => {}), setTimeout, clearTimeout, URLSearchParams, console };
+    fetch: () => new Promise(() => {}), addEventListener() {}, setTimeout, clearTimeout, URLSearchParams, console };
   vm.createContext(ctx);
   vm.runInContext(js + "\n;globalThis.__T = { GEO, clipSpecs };", ctx);
   ctx.__T.GEO.reading = JSON.parse(fs.readFileSync(path.join(ROOT, "data/reading.json"), "utf8"));

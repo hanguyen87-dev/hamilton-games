@@ -10,6 +10,7 @@ const PARENT_ONLY = new Set(["grants", "freezes"]);
 const PARENT_WRITES = new Set([...PARENT_ONLY, "redemptions"]);
 const ID = /^[A-Za-z0-9_.:-]{1,120}$/;
 const MAX_BODY = 64 * 1024;
+const BATCH = new Set(["answers", "days"]), MAX_BATCH = 60;
 
 // Reward shop: Hamilton can only ask for a reward at its real price; only a parent can mark it given or cancel it.
 // Must match SHOP in index.html.
@@ -44,6 +45,14 @@ export default {
       if (text.length > MAX_BODY) return json({ error: "Too large" }, 413);
       let body;
       try { body = JSON.parse(text); } catch { return json({ error: "Bad request" }, 400); }
+      // A batch of answers (and the day's Today's 5) is saved in one write: the free Blob plan allows 2,000 writes a month.
+      if (Array.isArray(body && body.writes)) {
+        const w = body.writes;
+        if (!w.length || w.length > MAX_BATCH || !w.every((x) => x && BATCH.has(x.c) && typeof x.id === "string" && ID.test(x.id) && x.doc && typeof x.doc === "object" && !Array.isArray(x.doc))) return json({ error: "Bad request" }, 400);
+        if (role === "parent") return json({ error: "The parent login doesn’t save games." }, 403);
+        await updateState(prefix, (state) => { for (const x of w) (state[x.c] || (state[x.c] = {}))[x.id] = x.doc; return state; });
+        return json({ ok: true });
+      }
       const { c, id, doc } = body || {};
       if (!COLLECTIONS.includes(c) || typeof id !== "string" || !ID.test(id) || !doc || typeof doc !== "object" || Array.isArray(doc)) return json({ error: "Bad request" }, 400);
       // The parent login only changes the parent tools; parent play stays in the browser.

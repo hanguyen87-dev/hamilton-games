@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script>try { const t = localStorage.getItem("hgt-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch { /* storage blocked: follow the device */ }</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -194,6 +195,13 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
 @keyframes fall { to { transform: translate(var(--dx), 105vh) rotate(var(--r)); } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; } }
 .loading { text-align: center; padding: 80px 0; font-size: 1.4rem; color: var(--muted); }
+/* Pull to refresh (home-screen app) */
+.ptr { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 8px); z-index: 30; width: 46px; height: 46px; margin-left: -23px; border-radius: 50%; background: var(--surface); border: 2px solid var(--line); box-shadow: 0 2px 10px rgb(0 0 0 / .18); display: grid; place-items: center; font-size: 1.4rem; opacity: 0; pointer-events: none; }
+.ptr span { display: grid; }
+.ptr.ready { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand); }
+.ptr.spin span { animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+main.swiping { will-change: transform; }
 </style>
 </head>
 <body>
@@ -203,6 +211,7 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
   <div class="grow"></div>
   <span class="chip" id="starChip" title="Stars">⭐ 0</span>
   <span class="chip" id="streakChip" title="Days in a row">🔥 0</span>
+  <button class="icon" id="themeBtn" aria-label="Day or night">🌗</button>
   <button class="icon" id="soundBtn" aria-label="Sound on">🔊</button>
 </header>
 <main id="app"><p class="loading">Loading… 🚀</p></main>
@@ -286,25 +295,34 @@ function localLoad() {
   try { data = JSON.parse(localStorage.getItem("hgt-local") || "{}"); } catch { data = {}; }
   return { role: new URLSearchParams(location.search).get("as") === "parent" ? "parent" : "student", space: "local", data };
 }
+// Answers wait here and go to the server together (end of a round, app hidden, 8 waiting, or after a minute):
+// the free storage plan allows 2,000 writes a month for all the family's apps, so each answer can't be its own write.
 const queue = [];
-let flushing = false;
+const BATCHED = new Set(["answers", "days"]), BATCH_MAX = 60;
+let flushing = false, flushTimer = null;
 function put(c, id, doc) {
   (S.data[c] ||= {})[id] = doc;
   if (S.role === "parent" && !PARENT_WRITES.has(c)) return;  // grown-up play isn't saved
   if (!S.api) { try { localStorage.setItem("hgt-local", JSON.stringify(S.data)); } catch { /* full */ } return; }
   queue.push({ c, id, doc });
-  flush();
+  if (!BATCHED.has(c) || queue.length >= 8) flush();
+  else if (!flushTimer) flushTimer = setTimeout(flush, 60000);
 }
 async function flush() {
+  clearTimeout(flushTimer); flushTimer = null;
   if (flushing) return;
   flushing = true;
   while (queue.length) {
+    let n = 0;
+    while (n < queue.length && n < BATCH_MAX && BATCHED.has(queue[n].c)) n++;
+    const part = queue.slice(0, n || 1);
     try {
-      const r = await fetch("/api/db", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(queue[0]) });
+      const body = n ? { writes: part } : part[0];
+      const r = await fetch("/api/db", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
       if (r.status === 401) { location.href = "/login"; return; }
-      if (r.status === 400 || r.status === 403 || r.status === 413) { const j = await r.json().catch(() => ({})); toast(j.error || "That couldn’t be saved."); queue.shift(); continue; }
+      if (r.status === 400 || r.status === 403 || r.status === 413) { const j = await r.json().catch(() => ({})); toast(j.error || "That couldn’t be saved."); queue.splice(0, part.length); continue; }
       if (!r.ok) throw new Error("save " + r.status);
-      queue.shift();
+      queue.splice(0, part.length);
     } catch {
       flushing = false;
       toast("Saving… check the internet.");
@@ -314,6 +332,17 @@ async function flush() {
   }
   flushing = false;
 }
+// Leaving the app (home button, switching apps, closing): send what's waiting even if the page is closing.
+function flushOnHide() {
+  if (!queue.length || flushing || !S.api) return;
+  const writes = queue.filter((x) => BATCHED.has(x.c)).slice(0, BATCH_MAX);
+  if (writes.length !== queue.length) { flush(); return; }
+  clearTimeout(flushTimer); flushTimer = null;
+  fetch("/api/db", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ writes }), keepalive: true })
+    .then((r) => { if (r.ok) queue.splice(0, writes.length); }).catch(() => {});
+}
+addEventListener("pagehide", flushOnHide);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") flushOnHide(); });
 // Writes that must be accepted before the screen changes (reward requests, parent tools).
 async function putNow(c, id, doc) {
   if (!S.api) { put(c, id, doc); return true; }
@@ -975,6 +1004,7 @@ function finishRound() {
   const r = S.round, right = r.results.filter(Boolean).length, today = dayOf();
   let firstToday = false;
   if (r.mode === "today" && !(S.data.days || {})[today]) { put("days", today, { d: today, n: right, t: Date.now() }); firstToday = true; }
+  flush();
   const after = tally();
   r.summary = { right, firstToday, gained: after.earned - r.before, streak: after.streak };
   S.view = "done";
@@ -1006,6 +1036,8 @@ function render() {
   else app.innerHTML = homeView(t);
   if (S.view === "play") renderDots();
   window.scrollTo(0, 0);
+  // Off the home screen, keep one extra history step so Safari's own back swipe goes back one screen, not out of the app.
+  if (S.view !== "home" && !(history.state && history.state.hgt)) try { history.pushState({ hgt: 1 }, ""); } catch { /* the browser limits how often this can run */ }
 }
 function homeView(t) {
   const left = PRACTICE_PER_STAR - (t.practiceToday % PRACTICE_PER_STAR);
@@ -1243,6 +1275,105 @@ document.addEventListener("visibilitychange", async () => {
   if (document.visibilityState !== "visible" || S.view === "play" || !S.api || Date.now() - lastLoad < 60000 || queue.length) return;
   try { const j = await load(); S.data = j.data; lastLoad = Date.now(); render(); } catch { /* keep what we have */ }
 });
+
+// ---------- Day / Night ----------
+// Auto follows the iPad's setting; saved on each device, and the <head> script applies it before the page shows.
+const THEMES = [["auto", "🌗", "Auto: like the iPad"], ["light", "☀️", "Day mode"], ["dark", "🌙", "Night mode"]];
+let theme = THEMES.some((x) => x[0] === document.documentElement.dataset.theme) ? document.documentElement.dataset.theme : "auto";
+function paintTheme() { const t = THEMES.find((x) => x[0] === theme); $("#themeBtn").textContent = t[1]; $("#themeBtn").setAttribute("aria-label", t[2]); }
+$("#themeBtn").addEventListener("click", () => {
+  theme = THEMES[(THEMES.findIndex((x) => x[0] === theme) + 1) % THEMES.length][0];
+  if (theme === "auto") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = theme;
+  try { if (theme === "auto") localStorage.removeItem("hgt-theme"); else localStorage.setItem("hgt-theme", theme); } catch { /* works until the page closes */ }
+  paintTheme();
+  toast(THEMES.find((x) => x[0] === theme)[2]);
+});
+paintTheme();
+
+// ---------- iPhone and iPad gestures ----------
+// The home-screen app has no back swipe or pull-to-refresh of its own, so the app adds them.
+// Swipe from the left edge: back one screen (not during a game; the ✕ button does that). Swipe sideways on a story: turn the page.
+// Pull down at the top: refresh (not during a game). In Safari, its own back swipe goes back one screen.
+const BACK = { done: "home", rewards: "home", grownups: "home", voices: "grownups", stories: "home", story: "stories" };
+const EDGE = 28;
+const standalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+function goBack() {
+  const to = BACK[S.view];
+  if (!to) return false;
+  if (S.view === "done") S.round = null;
+  S.view = to; render();
+  return true;
+}
+addEventListener("popstate", () => {
+  if (S.view === "home") return;
+  if (S.view === "play") { try { history.pushState({ hgt: 1 }, ""); } catch { /* limited */ } $("#homeBtn").click(); return; }
+  goBack();
+});
+function turnPage(dir) {
+  const st = R().stories.find((x) => x.id === S.story.id), i = S.story.page + dir;
+  const b = document.querySelector(`.storynav [data-sp="${i}"]`);
+  if (b && !b.disabled) { b.click(); return true; }
+  if (dir < 0 && S.story.page >= st.pages.length) { S.story.page = i; render(); return true; }
+  return false;
+}
+async function refreshApp() {
+  await flush();
+  for (let i = 0; (flushing || queue.length) && i < 50; i++) await new Promise((r) => setTimeout(r, 100));
+  location.reload();
+}
+const ptr = document.createElement("div");
+ptr.className = "ptr"; ptr.setAttribute("aria-hidden", "true"); ptr.innerHTML = "<span>🔄</span>";
+document.body.append(ptr);
+const mainEl = $("#app");
+function settle(el, css) { el.style.transition = "transform .18s ease-out, opacity .18s ease-out"; Object.assign(el.style, css); setTimeout(() => { el.style.transition = ""; }, 200); }
+let g = null;
+document.addEventListener("touchstart", (e) => {
+  g = null;
+  if (e.touches.length !== 1 || e.target.closest("input, textarea, select, .modal")) return;
+  const t = e.touches[0];
+  g = {
+    x0: t.clientX, y0: t.clientY, t0: Date.now(), lock: null, dx: 0, dy: 0,
+    back: isIOS() && standalone() && t.clientX < EDGE && !!BACK[S.view],
+    page: S.view === "story" && t.clientX >= EDGE,
+    pull: standalone() && navigator.maxTouchPoints > 0 && window.scrollY <= 0 && S.view !== "play"
+  };
+}, { passive: true });
+document.addEventListener("touchmove", (e) => {
+  if (!g) return;
+  const t = e.touches[0];
+  g.dx = t.clientX - g.x0; g.dy = t.clientY - g.y0;
+  if (!g.lock) {
+    if (Math.abs(g.dx) < 10 && Math.abs(g.dy) < 10) return;
+    g.lock = Math.abs(g.dx) > Math.abs(g.dy) ? (g.back ? "back" : g.page ? "page" : "none") : g.pull && g.dy > 0 ? "pull" : "none";
+    if (g.lock === "back" || g.lock === "page") mainEl.classList.add("swiping");
+  }
+  if (g.lock === "back") { e.preventDefault(); mainEl.style.transform = `translateX(${Math.max(0, g.dx)}px)`; }
+  else if (g.lock === "page") mainEl.style.transform = `translateX(${g.dx * 0.35}px)`;
+  else if (g.lock === "pull") {
+    const d = Math.min(Math.max(0, g.dy) * 0.5, 80);
+    ptr.style.opacity = String(Math.min(1, d / 60)); ptr.style.transform = `translateY(${d}px) rotate(${d * 4}deg)`; ptr.classList.toggle("ready", d >= 60);
+  }
+}, { passive: false });
+function endGesture(cancel) {
+  if (!g) return;
+  const { lock, dx, dy, t0 } = g, fast = Date.now() - t0 < 250;
+  g = null;
+  mainEl.classList.remove("swiping");
+  if (lock === "back") {
+    if (!cancel && (dx > 90 || (dx > 40 && fast))) {
+      settle(mainEl, { transform: `translateX(${innerWidth}px)` });
+      setTimeout(() => { goBack(); requestAnimationFrame(() => { mainEl.style.transition = ""; mainEl.style.transform = ""; }); }, 160);
+    } else settle(mainEl, { transform: "" });
+  } else if (lock === "page") {
+    if (!cancel && Math.abs(dx) > 70 && turnPage(dx < 0 ? 1 : -1)) mainEl.style.transform = ""; else settle(mainEl, { transform: "" });
+  } else if (lock === "pull") {
+    if (!cancel && Math.min(Math.max(0, dy) * 0.5, 80) >= 60) { ptr.classList.add("spin"); settle(ptr, { transform: "translateY(60px)" }); refreshApp(); }
+    else { settle(ptr, { opacity: "0", transform: "" }); ptr.classList.remove("ready"); }
+  }
+}
+document.addEventListener("touchend", () => endGesture(false));
+document.addEventListener("touchcancel", () => endGesture(true));
 
 (async function boot() {
   try {

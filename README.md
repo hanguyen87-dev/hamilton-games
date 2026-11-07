@@ -24,7 +24,7 @@ A private, phone-first learning game for Hamilton (almost 5), built from the SAT
 - **Letter Sounds** game: sounds in teaching order (m, s, a, t, p, i, n, f, o, d, c, h, e, r, …), first sounds, blending by ear (/k/ /a/ /t/ → 🐱), reading words with tap-to-hear letter tiles and a 🐢 Sound it out button.
 - **Stories**: 12 short books written for him in `data/reading.json`, using only sounds he's learning plus a few sight words (the, is, a, I, …). Tapping a word sounds it out, then says it.
 - **Voice clips**: `audio/<set>/*.mp3` made once by `tools/build_audio.mjs --set warm|bright` with Google Cloud Text-to-Speech voices (warm = en-US-Neural2-F, bright = en-US-Neural2-H, picked on the Voice page). They say pure sounds like /k/, which the device voice can't. The clip list comes from `clipSpecs()` in `index.html`. Missing clips fall back to the device voice. The API key lives in the Mac Keychain (`hamilton-tts`), never in files. After changing reading content, rerun the script and redeploy.
-- **Game voice**: every other line is spoken by the same Google voice through `api/tts.js`: the first time a sentence is needed it is made by Google and saved in the private Blob store (`tts/<set>/<hash>.mp3`); after that it plays from storage. Needs the `GOOGLE_TTS_KEY` env var on Vercel (added from the Keychain, never typed). If the voice can't be reached, the device voice says it. Grown-ups → Voice can switch games back to the device voice.
+- **Game voice**: every other line is spoken by the same Google voice through `api/tts.js`: the first time a sentence is needed it is made by Google. Not saved in Blob (the free plan allows only 2,000 Blob writes a month across all the family's apps); Vercel's CDN and the browser keep each line instead. Needs the `GOOGLE_TTS_KEY` env var on Vercel (added from the Keychain, never typed). If the voice can't be reached, the device voice says it. Grown-ups → Voice can switch games back to the device voice.
 
 ## Stars and prizes
 
@@ -62,3 +62,8 @@ Same as SAT Daily Ten, no framework, no build step: `index.html` (the whole app)
 
 - Flags use emoji, which show on iPhone, iPad, and Mac. Windows shows letters instead.
 - Not included from the SAT app: phone reminders, friend accounts, the signed note. Easy to add back.
+
+## iPhone and iPad
+- Home-screen app: swipe from the left edge to go back one screen (not during a game), pull down at the top to refresh (saves first), swipe sideways on a story to turn pages. In Safari, its own back swipe goes back one screen.
+- Day / Night / Auto button in the top bar (saved per device, `hgt-theme`).
+- Saving: answers are sent in batches (end of a round, app hidden, 8 waiting, or after a minute) as `PUT /api/db {writes:[...]}`, to stay far under the Blob plan's 2,000 writes a month.
