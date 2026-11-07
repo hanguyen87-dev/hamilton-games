@@ -388,10 +388,12 @@ const STYLES = { cheerful: { name: "Cheerful", rate: 0.95, pitch: 1.2 }, calm: {
 const SAMPLE = `Great job, ${KID}! That's Texas. Its capital is Austin. Can you find Florida?`;
 // Letter sounds and stories use recorded Google voices; each set is a folder in audio/ (made by tools/build_audio.mjs).
 const READ_SETS = { warm: "Warm", bright: "Bright" };
-let vPref = { uri: null, style: "cheerful", read: "warm" };
+// Everything else is said by the same Google voice (made on first use by /api/tts), or by the device voice if chosen.
+const GAME_VOICES = { google: "Google voice", device: "Device voice" };
+let vPref = { uri: null, style: "cheerful", read: "warm", games: "google" };
 try {
   const v = JSON.parse(localStorage.getItem("hgt-voice") || "null");
-  if (v && typeof v === "object") vPref = { uri: typeof v.uri === "string" ? v.uri : null, style: Object.hasOwn(STYLES, v.style) ? v.style : "cheerful", read: Object.hasOwn(READ_SETS, v.read) ? v.read : "warm" };
+  if (v && typeof v === "object") vPref = { uri: typeof v.uri === "string" ? v.uri : null, style: Object.hasOwn(STYLES, v.style) ? v.style : "cheerful", read: Object.hasOwn(READ_SETS, v.read) ? v.read : "warm", games: Object.hasOwn(GAME_VOICES, v.games) ? v.games : "google" };
 } catch { /* storage blocked or bad value: defaults */ }
 const saveVoice = () => { try { localStorage.setItem("hgt-voice", JSON.stringify(vPref)); } catch { /* storage blocked */ } };
 // Apple's joke voices and the robotic Eloquence ones are hidden.
@@ -417,15 +419,19 @@ document.addEventListener("pointerdown", () => {
   try { ac ||= new (window.AudioContext || window.webkitAudioContext)(); ac.resume(); } catch { /* no audio */ }
   if ("speechSynthesis" in window) { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; speechSynthesis.speak(u); }
 }, { once: true });
-// One utterance per sentence gives natural pauses; praise is brighter, "try again" gentler, questions lift a little.
+const sentences = (text) => String(text).split(/(?<=[.!?])\s+/).map((p) => p.trim()).filter(Boolean);
 function say(text, delay = 0, mood = "", force = false) {
+  if ((!S.sound && !force) || !text) return;
+  if (vPref.games === "google" && !TTS.off) speak(sentences(text).map((t) => ({ tts: t, text: t, gap: 0.25 })), delay, force, mood);
+  else sayDevice(text, delay, mood, force);
+}
+// One utterance per sentence gives natural pauses; praise is brighter, "try again" gentler, questions lift a little.
+function sayDevice(text, delay = 0, mood = "", force = false) {
   if ((!S.sound && !force) || !("speechSynthesis" in window) || !text) return;
   stopClips();
   speechSynthesis.cancel();
   const st = STYLES[vPref.style], v = voice;
-  const go = () => String(text).split(/(?<=[.!?])\s+/).forEach((part, i) => {
-    part = part.trim();
-    if (!part) return;
+  const go = () => sentences(text).forEach((part, i) => {
     const u = new SpeechSynthesisUtterance(part), cheer = mood === "praise" && i === 0;
     if (v) { u.voice = v; u.lang = v.lang; } else u.lang = "en-US";
     u.rate = st.rate + (cheer ? 0.05 : 0);
@@ -514,25 +520,46 @@ function clipBuffer(id) {
   }
   return CLIPS.buf.get(key);
 }
+// Google voice lines: fetched from /api/tts (kept by the browser and the server), decoded ones kept in memory for a while.
+const TTS = { off: false, buf: new Map() };
+function ttsBuffer(text) {
+  const key = `${vPref.read}|${text}`;
+  let p = TTS.buf.get(key);
+  if (p) { TTS.buf.delete(key); TTS.buf.set(key, p); return p; }
+  p = fetch(`/api/tts?v=${vPref.read}&t=${encodeURIComponent(text)}`, { signal: AbortSignal.timeout(6000) }).then((r) => {
+    if ([401, 403, 404, 503].includes(r.status)) TTS.off = true;  // not set up (or local preview): use the device voice
+    if (!r.ok) throw new Error("tts " + r.status);
+    return r.arrayBuffer();
+  }).then((b) => ac.decodeAudioData(b));
+  p.catch(() => TTS.buf.delete(key));
+  TTS.buf.set(key, p);
+  if (TTS.buf.size > 80) TTS.buf.delete(TTS.buf.keys().next().value);
+  return p;
+}
+// Start making lines that are likely next (the answer's explanation), so they play without a wait.
+function preload(text) {
+  if (!text || vPref.games !== "google" || TTS.off || !ac) return;
+  sentences(text).forEach((t) => ttsBuffer(t).catch(() => {}));
+}
 function stopClips() {
   CLIPS.token++;
   for (const src of CLIPS.playing) { try { src.stop(); } catch { /* already done */ } }
   CLIPS.playing = [];
 }
-// items: [{ id, text, gap }] played in order; gap = seconds of quiet after the clip.
-async function speak(items, delay = 0, force = false) {
+// items: [{ id or tts, text, gap }] played in order: id = a reading clip, tts = a Google voice line; gap = seconds of quiet after.
+async function speak(items, delay = 0, force = false, mood = "") {
   if ((!S.sound && !force) || !items || !items.length) return;
   stopClips();
   if ("speechSynthesis" in window) speechSynthesis.cancel();
   const token = CLIPS.token;
   if (delay) await new Promise((r) => setTimeout(r, delay));
   if (token !== CLIPS.token) return;
-  const fallback = () => say(items.map((it) => it.text).join(" "), 0, "", force);
-  if (!items.every((it) => CLIPS.have.has(it.id))) { fallback(); return; }
+  const fallback = () => sayDevice(items.map((it) => it.text).join(" "), 0, mood, force);
+  if (!items.every((it) => it.tts ? !TTS.off : CLIPS.have.has(it.id))) { fallback(); return; }
   try {
     ac ||= new (window.AudioContext || window.webkitAudioContext)();
     if (ac.state === "suspended") await ac.resume();
-    const bufs = await Promise.all(items.map((it) => clipBuffer(it.id)));
+    const bufs = await Promise.all(items.map((it) => it.tts ? ttsBuffer(it.tts) : clipBuffer(it.id)));
     if (token !== CLIPS.token) return;
     let t = ac.currentTime + 0.03;
     bufs.forEach((b, i) => {
@@ -899,7 +926,7 @@ async function nextQuestion() {
   Object.assign(q, { g, lv });
   Object.assign(r, { q, tries: 0, solved: false });
   render();
-  if (q.clips) speak(q.clips, 150); else say(q.say, 150);
+  if (q.clips) speak(q.clips, 150); else { say(q.say, 150); preload(q.after); }
 }
 function choose(key, el) {
   const r = S.round, q = r && r.q;
@@ -1042,15 +1069,18 @@ function rewardsView(t) {
 }
 const LANGS = { US: "American", GB: "British", AU: "Australian", IE: "Irish", IN: "Indian", ZA: "South African", NZ: "New Zealand", CA: "Canadian", SC: "Scottish" };
 const langName = (l) => LANGS[String(l).slice(3, 5).toUpperCase()] || l;
-const voicePanel = () => `<div class="panel"><h2>Voice</h2><p>Reading aloud with <b>${voice ? esc(voice.name) : "the device voice"}</b>, ${STYLES[vPref.style].name.toLowerCase()}. Letter sounds and stories: <b>${READ_SETS[vPref.read]}</b>. Set for this device only.</p><button class="mini" data-go="voices">Choose a voice 🔊</button></div>`;
+const voicePanel = () => `<div class="panel"><h2>Voice</h2><p>Reading aloud with <b>${voice ? esc(voice.name) : "the device voice"}</b>, ${STYLES[vPref.style].name.toLowerCase()}. Google voice: <b>${READ_SETS[vPref.read]}</b>${vPref.games === "device" ? " (Letter Sounds and Stories only)" : ""}. Set for this device only.</p><button class="mini" data-go="voices">Choose a voice 🔊</button></div>`;
 function voicesView() {
-  if (!("speechSynthesis" in window)) return `<div class="panel"><h2>Voices</h2><p>This browser can't read aloud.</p></div>`;
+  const google = `<div class="panel"><h2>Google voice</h2><p>Tap one to hear it. Letter Sounds and Stories always use it.</p><div class="form">${Object.entries(READ_SETS).map(([k, n]) => `<button class="mini${k === vPref.read ? "" : " soft"}" data-vread="${k}">${n}</button>`).join("")}</div>
+    <p style="margin-top:14px">Other games talk with:</p><div class="form">${Object.entries(GAME_VOICES).map(([k, n]) => `<button class="mini${k === vPref.games ? "" : " soft"}" data-vgames="${k}">${n}</button>`).join("")}</div></div>`;
+  if (!("speechSynthesis" in window)) return google;
   const en = englishVoices(), great = en.some((v) => voiceScore(v) >= 40);
   const rows = en.slice(0, 40).map((v) => {
     const on = voice && v.voiceURI === voice.voiceURI, sc = voiceScore(v);
     return `<div class="li"><span class="grow"><b>${esc(v.name)}</b> <small>${esc(langName(v.lang))}</small> ${sc >= 40 ? `<span class="tag good">✨ Best</span>` : sc >= 20 ? `<span class="tag">Good</span>` : ""}</span><button class="mini soft" data-vplay="${esc(v.voiceURI)}">▶ Play</button><button class="mini" data-vuse="${esc(v.voiceURI)}" ${on ? "disabled" : ""}>${on ? "Using ✓" : "Use"}</button></div>`;
   }).join("");
-  return `<div class="panel"><h2>Reading voice</h2><p>For Letter Sounds and Stories. Tap one to hear it.</p><div class="form">${Object.entries(READ_SETS).map(([k, n]) => `<button class="mini${k === vPref.read ? "" : " soft"}" data-vread="${k}">${n}</button>`).join("")}</div></div>
+  return `${google}
+  <h2 style="margin:22px 0 8px">Device voice</h2><p class="storytitle" style="text-align:left;margin-bottom:10px">Used when "Device voice" is picked above, or if the Google voice can't be reached.</p>
   <div class="panel"><h2>How it talks</h2><p>Tap one to hear it.</p><div class="form">${Object.entries(STYLES).map(([k, st]) => `<button class="mini${k === vPref.style ? "" : " soft"}" data-vstyle="${k}">${st.name}</button>`).join("")}</div></div>
   ${great ? "" : `<div class="panel"><h2>Get a better voice (free)</h2><p>This device only has basic voices. Apple's Premium voices sound much more natural:</p>
     <p><b>iPad or iPhone:</b> Settings → Accessibility → Read &amp; Speak (or Spoken Content) → Voices → English → tap <b>Ava (Premium)</b>, <b>Zoe (Premium)</b>, or <b>Evan (Enhanced)</b> to download. Then close and reopen this app.</p>
@@ -1149,19 +1179,20 @@ document.addEventListener("click", async (e) => {
     if (a === "cleartest") modal(`<span class="em">🧪</span><h2>Clear all test data?</h2>`, async () => { await fetch("/api/db", { method: "DELETE" }); location.reload(); });
     return;
   }
-  const vb = e.target.closest("[data-vplay],[data-vuse],[data-vstyle],[data-vread]");
+  const vb = e.target.closest("[data-vplay],[data-vuse],[data-vstyle],[data-vread],[data-vgames]");
   if (vb) {
+    if (vb.dataset.vgames && Object.hasOwn(GAME_VOICES, vb.dataset.vgames)) { vPref.games = vb.dataset.vgames; saveVoice(); render(); say(SAMPLE, 0, "praise", true); return; }
     if (vb.dataset.vread && Object.hasOwn(READ_SETS, vb.dataset.vread)) {
       vPref.read = vb.dataset.vread; saveVoice(); render();
       loadClipIndex().then(() => speak([{ id: "p-0", text: `Great job, ${KID}!`, gap: 0.4 }, { id: "t-sam-2", text: "Sam sat on a mat." }], 0, true));
       return;
     }
-    if (vb.dataset.vstyle && Object.hasOwn(STYLES, vb.dataset.vstyle)) { vPref.style = vb.dataset.vstyle; saveVoice(); render(); say(SAMPLE, 0, "praise", true); return; }
+    if (vb.dataset.vstyle && Object.hasOwn(STYLES, vb.dataset.vstyle)) { vPref.style = vb.dataset.vstyle; saveVoice(); render(); sayDevice(SAMPLE, 0, "praise", true); return; }
     const v = voices.find((x) => x.voiceURI === (vb.dataset.vplay || vb.dataset.vuse));
     if (!v) return;
     if (vb.dataset.vuse) { vPref.uri = v.voiceURI; saveVoice(); pickVoice(); render(); }
     const keep = voice;
-    voice = v; say(SAMPLE, 0, "praise", true); voice = keep;
+    voice = v; sayDevice(SAMPLE, 0, "praise", true); voice = keep;
     return;
   }
   const buy = e.target.closest("[data-buy]");
