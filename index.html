@@ -2601,12 +2601,14 @@ document.addEventListener("click", async (e) => {
     return;
   }
   const story = e.target.closest("[data-story]");
-  if (story) { S.story = { id: story.dataset.story, page: 0 }; S.view = "story"; render(); const st = R().stories.find((x) => x.id === S.story.id); speak([lineItem(`t-${st.id}-title`, st.title)]); return; }
+  // A book reads its title and first page aloud; each new page is read when it opens (tap a word to sound it out).
+  if (story) { S.story = { id: story.dataset.story, page: 0 }; S.view = "story"; render(); const st = R().stories.find((x) => x.id === S.story.id); speak([{ ...lineItem(`t-${st.id}-title`, st.title), gap: 0.8 }, lineItem(`t-${st.id}-0`, st.pages[0][0])]); return; }
   const sp = e.target.closest("[data-sp]");
   if (sp) {
     const st = R().stories.find((x) => x.id === S.story.id);
     S.story.page = Math.max(0, +sp.dataset.sp); render();
     if (S.story.page >= st.pages.length) { sfx.win(); confetti(50); speak([rq("end")], 300); }
+    else speak([lineItem(`t-${st.id}-${S.story.page}`, st.pages[S.story.page][0])], 250);
     return;
   }
   const wd = e.target.closest("[data-w]");
