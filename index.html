@@ -350,7 +350,7 @@ function levelOf(g) {
 }
 
 // ---------- sound + speech ----------
-let ac = null, voice = null;
+let ac = null, voice = null, voices = [];
 function tone(freqs, dur = 0.16, type = "triangle", gap = 0.09, vol = 0.18) {
   if (!S.sound) return;
   try {
@@ -366,10 +366,31 @@ function tone(freqs, dur = 0.16, type = "triangle", gap = 0.09, vol = 0.18) {
   } catch { /* no audio */ }
 }
 const sfx = { good: () => tone([523, 659, 784]), bad: () => tone([247, 196], 0.2, "sine", 0.15, 0.12), win: () => tone([523, 659, 784, 1047, 784, 1047], 0.22, "triangle", 0.12) };
+// Voice and style are chosen per device on the Voice page (Grown-ups); the best voice on the device is the default.
+const STYLES = { cheerful: { name: "Cheerful", rate: 0.95, pitch: 1.2 }, calm: { name: "Calm", rate: 0.85, pitch: 1 }, story: { name: "Storyteller", rate: 0.88, pitch: 1.08 } };
+const SAMPLE = `Great job, ${KID}! That's Texas. Its capital is Austin. Can you find Florida?`;
+let vPref = { uri: null, style: "cheerful" };
+try {
+  const v = JSON.parse(localStorage.getItem("hgt-voice") || "null");
+  if (v && typeof v === "object") vPref = { uri: typeof v.uri === "string" ? v.uri : null, style: Object.hasOwn(STYLES, v.style) ? v.style : "cheerful" };
+} catch { /* storage blocked or bad value: defaults */ }
+const saveVoice = () => { try { localStorage.setItem("hgt-voice", JSON.stringify(vPref)); } catch { /* storage blocked */ } };
+// Apple's joke voices and the robotic Eloquence ones are hidden.
+const NOVELTY = /^(Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|Junior|Ralph|Fred|Kathy|Eddy|Flo|Grandma|Grandpa|Reed|Rocko|Sandy|Shelley)\b/;
+function voiceScore(v) {
+  let s = /Premium/i.test(v.name) ? 50 : /Enhanced|Neural|Natural/i.test(v.name) ? 40 : /Online/i.test(v.name) ? 30 : 0;
+  if (/^Google/.test(v.name)) s += 20;
+  if (/^(Ava|Zoe|Evan|Nathan|Samantha|Allison|Susan|Tom|Joelle|Noelle)\b/.test(v.name)) s += 10;
+  if (/^en[-_]US/i.test(v.lang)) s += 5;
+  return s;
+}
+const englishVoices = () => voices.filter((v) => /^en[-_]/i.test(v.lang) && !NOVELTY.test(v.name)).sort((a, b) => voiceScore(b) - voiceScore(a) || a.name.localeCompare(b.name));
 function pickVoice() {
   if (!("speechSynthesis" in window)) return;
-  const vs = speechSynthesis.getVoices();
-  voice = vs.find((v) => /Samantha|Ava|Allison/.test(v.name) && v.lang.startsWith("en")) || vs.find((v) => v.lang === "en-US" && v.localService) || vs.find((v) => v.lang && v.lang.startsWith("en")) || null;
+  voices = speechSynthesis.getVoices();
+  const en = englishVoices();
+  voice = en.find((v) => v.voiceURI === vPref.uri) || en[0] || null;
+  if (S.view === "voices") render();
 }
 if ("speechSynthesis" in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
 // iPhones only allow sound that starts from a tap, so the first tap wakes up speech and audio.
@@ -377,10 +398,20 @@ document.addEventListener("pointerdown", () => {
   try { ac ||= new (window.AudioContext || window.webkitAudioContext)(); ac.resume(); } catch { /* no audio */ }
   if ("speechSynthesis" in window) { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; speechSynthesis.speak(u); }
 }, { once: true });
-function say(text, delay = 0) {
-  if (!S.sound || !("speechSynthesis" in window) || !text) return;
+// One utterance per sentence gives natural pauses; praise is brighter, "try again" gentler, questions lift a little.
+function say(text, delay = 0, mood = "", force = false) {
+  if ((!S.sound && !force) || !("speechSynthesis" in window) || !text) return;
   speechSynthesis.cancel();
-  const go = () => { const u = new SpeechSynthesisUtterance(text); if (voice) u.voice = voice; u.lang = "en-US"; u.rate = 0.9; u.pitch = 1.1; speechSynthesis.speak(u); };
+  const st = STYLES[vPref.style], v = voice;
+  const go = () => String(text).split(/(?<=[.!?])\s+/).forEach((part, i) => {
+    part = part.trim();
+    if (!part) return;
+    const u = new SpeechSynthesisUtterance(part), cheer = mood === "praise" && i === 0;
+    if (v) { u.voice = v; u.lang = v.lang; } else u.lang = "en-US";
+    u.rate = st.rate + (cheer ? 0.05 : 0);
+    u.pitch = Math.min(2, st.pitch + (cheer ? 0.15 : mood === "oops" ? -0.05 : part.endsWith("?") ? 0.05 : 0));
+    speechSynthesis.speak(u);
+  });
   delay ? setTimeout(go, delay) : go();
 }
 function confetti(n = 30) {
@@ -714,7 +745,7 @@ function choose(key, el) {
     const praise = pick(PRAISE);
     msg.className = "msg good"; msg.textContent = `${praise} ${q.after || ""}`;
     sfx.good(); confetti();
-    say(`${praise} ${q.after || ""}`, 380);
+    say(`${praise} ${q.after || ""}`, 380, "praise");
     put("answers", uid(), { g: q.g, d: dayOf(), ok: first, lv: q.lv, t: Date.now(), ...(r.mode === "today" ? { dl: 1 } : {}) });
     const next = $("#nextBtn");
     next.hidden = false;
@@ -727,13 +758,13 @@ function choose(key, el) {
       if (p) { p.classList.add("miss"); setTimeout(() => p.classList.remove("miss"), 900); }
       const oops = `That's ${q.tapName(+key)}. Try again!`;
       msg.className = "msg bad"; msg.textContent = oops;
-      sfx.bad(); say(oops, 250);
+      sfx.bad(); say(oops, 250, "oops");
       return;
     }
     if (el) { el.classList.add("no"); el.disabled = true; }
     const oops = pick(OOPS);
     msg.className = "msg bad"; msg.textContent = oops;
-    sfx.bad(); say(oops, 250);
+    sfx.bad(); say(oops, 250, "oops");
   }
 }
 function advance() {
@@ -770,6 +801,7 @@ function render() {
   else if (S.view === "done") app.innerHTML = doneView(t);
   else if (S.view === "rewards") app.innerHTML = rewardsView(t);
   else if (S.view === "grownups") app.innerHTML = grownupsView(t);
+  else if (S.view === "voices") app.innerHTML = voicesView();
   else app.innerHTML = homeView(t);
   if (S.view === "play") renderDots();
   window.scrollTo(0, 0);
@@ -832,10 +864,26 @@ function rewardsView(t) {
   <h2>Prizes</h2>
   <div class="rows shop">${SHOP.map((s) => `<div class="row"><span class="ico">${s.em}</span><span class="txt"><b>${s.name}</b><small class="price">${s.stars} ⭐</small></span>${kid ? `<button class="mini" data-buy="${s.id}" ${t.balance < s.stars ? "disabled" : ""}>${t.balance < s.stars ? `${s.stars - t.balance} more` : "Get it!"}</button>` : ""}</div>`).join("")}</div>`;
 }
+const LANGS = { US: "American", GB: "British", AU: "Australian", IE: "Irish", IN: "Indian", ZA: "South African", NZ: "New Zealand", CA: "Canadian", SC: "Scottish" };
+const langName = (l) => LANGS[String(l).slice(3, 5).toUpperCase()] || l;
+const voicePanel = () => `<div class="panel"><h2>Voice</h2><p>Reading aloud with <b>${voice ? esc(voice.name) : "the device voice"}</b>, ${STYLES[vPref.style].name.toLowerCase()}. Set for this device only.</p><button class="mini" data-go="voices">Choose a voice 🔊</button></div>`;
+function voicesView() {
+  if (!("speechSynthesis" in window)) return `<div class="panel"><h2>Voices</h2><p>This browser can't read aloud.</p></div>`;
+  const en = englishVoices(), great = en.some((v) => voiceScore(v) >= 40);
+  const rows = en.slice(0, 40).map((v) => {
+    const on = voice && v.voiceURI === voice.voiceURI, sc = voiceScore(v);
+    return `<div class="li"><span class="grow"><b>${esc(v.name)}</b> <small>${esc(langName(v.lang))}</small> ${sc >= 40 ? `<span class="tag good">✨ Best</span>` : sc >= 20 ? `<span class="tag">Good</span>` : ""}</span><button class="mini soft" data-vplay="${esc(v.voiceURI)}">▶ Play</button><button class="mini" data-vuse="${esc(v.voiceURI)}" ${on ? "disabled" : ""}>${on ? "Using ✓" : "Use"}</button></div>`;
+  }).join("");
+  return `<div class="panel"><h2>How it talks</h2><p>Tap one to hear it.</p><div class="form">${Object.entries(STYLES).map(([k, st]) => `<button class="mini${k === vPref.style ? "" : " soft"}" data-vstyle="${k}">${st.name}</button>`).join("")}</div></div>
+  ${great ? "" : `<div class="panel"><h2>Get a better voice (free)</h2><p>This device only has basic voices. Apple's Premium voices sound much more natural:</p>
+    <p><b>iPad or iPhone:</b> Settings → Accessibility → Read &amp; Speak (or Spoken Content) → Voices → English → tap <b>Ava (Premium)</b>, <b>Zoe (Premium)</b>, or <b>Evan (Enhanced)</b> to download. Then close and reopen this app.</p>
+    <p><b>Mac:</b> System Settings → Accessibility → Spoken Content → System voice → Manage Voices → English → tick Ava (Premium) or Zoe (Premium).</p></div>`}
+  <div class="panel"><h2>Voices on this device</h2><p>Sample: “${esc(SAMPLE)}”</p><div class="list">${rows || "<p>Loading voices… If nothing shows, reopen the app.</p>"}</div></div>`;
+}
 function grownupsView(t) {
   const adult = S.role === "parent" || S.role === "tester";
   if (!adult) {
-    return `<div class="panel"><h2>Grown-ups</h2><p>This page is for ${PARENT_NAME}.</p><button class="mini soft" data-act="logout">Log out</button></div>`;
+    return `<div class="panel"><h2>Grown-ups</h2><p>This page is for ${PARENT_NAME}.</p><button class="mini soft" data-act="logout">Log out</button></div>${voicePanel()}`;
   }
   const reqs = Object.entries(S.data.redemptions || {}).sort((a, b) => b[1].t - a[1].t);
   const open = reqs.filter(([, x]) => x.status === "requested");
@@ -857,6 +905,7 @@ function grownupsView(t) {
     <form class="form" id="freezeForm"><label>From<input name="from" type="date" required value="${dayOf()}"></label><label>To<input name="to" type="date" required value="${dayOf()}"></label><label style="flex:1">Reason<input name="reason" maxlength="120" placeholder="Trip"></label><button class="mini">Freeze</button></form>
     ${freezes.length ? `<div class="list" style="margin-top:10px">${freezes.map(([id, f]) => `<div class="li"><span class="grow">❄️ ${f.from} to ${f.to}${f.reason ? " · " + esc(f.reason) : ""}</span><button class="mini soft" data-unfreeze="${esc(id)}">Remove</button></div>`).join("")}</div>` : ""}</div>
   ${reqs.length > open.length ? `<div class="panel"><h2>Past prizes</h2><div class="list">${reqs.filter(([, x]) => x.status !== "requested").slice(0, 15).map(([, x]) => { const it = SHOP.find((s) => s.id === x.item) || { em: "🎁", name: x.item }; return `<div class="li"><span class="grow">${it.em} ${esc(it.name)} · ${x.stars} ⭐</span><span class="tag${x.status === "delivered" ? " good" : ""}">${x.status === "delivered" ? "Given" : "Cancelled"}</span></div>`; }).join("")}</div></div>` : ""}
+  ${voicePanel()}
   <div class="panel"><h2>This device</h2><div class="form">${S.space === "test" ? `<button class="mini soft" data-act="cleartest">Clear test data</button>` : ""}<button class="mini soft" data-act="logout">Log out</button></div></div>`;
 }
 
@@ -874,7 +923,7 @@ document.addEventListener("click", async (e) => {
   const go = e.target.closest("[data-go]");
   if (go) {
     const v = go.dataset.go;
-    if (v === "home" || v === "rewards" || v === "grownups") { S.view = v; S.round = null; render(); if (v === "rewards") say(`You have ${plural(tally().balance, "star", "stars")}!`); return; }
+    if (v === "home" || v === "rewards" || v === "grownups" || v === "voices") { S.view = v; S.round = null; render(); if (v === "rewards") say(`You have ${plural(tally().balance, "star", "stars")}!`); return; }
     startRound(v);
     return;
   }
@@ -890,6 +939,16 @@ document.addEventListener("click", async (e) => {
     if (a === "quit") { if (S.round.mode === "today" && S.round.results.length) modal(`<span class="em">🛑</span><h2>Stop Today's 5?</h2>`, () => { S.view = "home"; S.round = null; render(); }); else { S.view = "home"; S.round = null; render(); } }
     if (a === "logout") modal(`<span class="em">👋</span><h2>Log out?</h2>`, async () => { await fetch("/api/logout", { method: "POST" }).catch(() => {}); location.href = "/login"; });
     if (a === "cleartest") modal(`<span class="em">🧪</span><h2>Clear all test data?</h2>`, async () => { await fetch("/api/db", { method: "DELETE" }); location.reload(); });
+    return;
+  }
+  const vb = e.target.closest("[data-vplay],[data-vuse],[data-vstyle]");
+  if (vb) {
+    if (vb.dataset.vstyle && Object.hasOwn(STYLES, vb.dataset.vstyle)) { vPref.style = vb.dataset.vstyle; saveVoice(); render(); say(SAMPLE, 0, "praise", true); return; }
+    const v = voices.find((x) => x.voiceURI === (vb.dataset.vplay || vb.dataset.vuse));
+    if (!v) return;
+    if (vb.dataset.vuse) { vPref.uri = v.voiceURI; saveVoice(); pickVoice(); render(); }
+    const keep = voice;
+    voice = v; say(SAMPLE, 0, "praise", true); voice = keep;
     return;
   }
   const buy = e.target.closest("[data-buy]");
