@@ -386,10 +386,12 @@ const sfx = { good: () => tone([523, 659, 784]), bad: () => tone([247, 196], 0.2
 // Voice and style are chosen per device on the Voice page (Grown-ups); the best voice on the device is the default.
 const STYLES = { cheerful: { name: "Cheerful", rate: 0.95, pitch: 1.2 }, calm: { name: "Calm", rate: 0.85, pitch: 1 }, story: { name: "Storyteller", rate: 0.88, pitch: 1.08 } };
 const SAMPLE = `Great job, ${KID}! That's Texas. Its capital is Austin. Can you find Florida?`;
-let vPref = { uri: null, style: "cheerful" };
+// Letter sounds and stories use recorded Google voices; each set is a folder in audio/ (made by tools/build_audio.mjs).
+const READ_SETS = { warm: "Warm", bright: "Bright" };
+let vPref = { uri: null, style: "cheerful", read: "warm" };
 try {
   const v = JSON.parse(localStorage.getItem("hgt-voice") || "null");
-  if (v && typeof v === "object") vPref = { uri: typeof v.uri === "string" ? v.uri : null, style: Object.hasOwn(STYLES, v.style) ? v.style : "cheerful" };
+  if (v && typeof v === "object") vPref = { uri: typeof v.uri === "string" ? v.uri : null, style: Object.hasOwn(STYLES, v.style) ? v.style : "cheerful", read: Object.hasOwn(READ_SETS, v.read) ? v.read : "warm" };
 } catch { /* storage blocked or bad value: defaults */ }
 const saveVoice = () => { try { localStorage.setItem("hgt-voice", JSON.stringify(vPref)); } catch { /* storage blocked */ } };
 // Apple's joke voices and the robotic Eloquence ones are hidden.
@@ -495,19 +497,22 @@ const the = (n) => /^(United|Netherlands|Philippines)/.test(n) ? "the " + n : n,
 const flag = (iso) => String.fromCodePoint(...[...iso].map((ch) => 0x1F1E6 + ch.charCodeAt(0) - 65));
 
 // ---------- recorded clips (reading) ----------
-// audio/<id>.mp3 are made once by tools/build_audio.mjs (Google voice); audio/index.json lists them.
+// audio/<set>/<id>.mp3 are made once by tools/build_audio.mjs (Google voice); audio/<set>/index.json lists them.
 // A missing clip falls back to the device voice, so the app works before the clips exist.
 const CLIPS = { have: new Set(), buf: new Map(), playing: [], token: 0 };
 async function loadClipIndex() {
-  try { const r = await fetch("/audio/index.json", { cache: "no-store" }); if (r.ok) CLIPS.have = new Set(await r.json()); } catch { /* none yet */ }
+  const set = vPref.read;
+  CLIPS.have = new Set();
+  try { const r = await fetch(`/audio/${set}/index.json`, { cache: "no-store" }); if (r.ok && set === vPref.read) CLIPS.have = new Set(await r.json()); } catch { /* none yet */ }
 }
 function clipBuffer(id) {
-  if (!CLIPS.buf.has(id)) {
-    const p = fetch(`/audio/${id}.mp3`).then((r) => { if (!r.ok) throw new Error("clip"); return r.arrayBuffer(); }).then((b) => ac.decodeAudioData(b));
-    p.catch(() => CLIPS.buf.delete(id));
-    CLIPS.buf.set(id, p);
+  const key = `${vPref.read}/${id}`;
+  if (!CLIPS.buf.has(key)) {
+    const p = fetch(`/audio/${key}.mp3`).then((r) => { if (!r.ok) throw new Error("clip"); return r.arrayBuffer(); }).then((b) => ac.decodeAudioData(b));
+    p.catch(() => CLIPS.buf.delete(key));
+    CLIPS.buf.set(key, p);
   }
-  return CLIPS.buf.get(id);
+  return CLIPS.buf.get(key);
 }
 function stopClips() {
   CLIPS.token++;
@@ -515,14 +520,14 @@ function stopClips() {
   CLIPS.playing = [];
 }
 // items: [{ id, text, gap }] played in order; gap = seconds of quiet after the clip.
-async function speak(items, delay = 0) {
-  if (!S.sound || !items || !items.length) return;
+async function speak(items, delay = 0, force = false) {
+  if ((!S.sound && !force) || !items || !items.length) return;
   stopClips();
   if ("speechSynthesis" in window) speechSynthesis.cancel();
   const token = CLIPS.token;
   if (delay) await new Promise((r) => setTimeout(r, delay));
   if (token !== CLIPS.token) return;
-  const fallback = () => say(items.map((it) => it.text).join(" "));
+  const fallback = () => say(items.map((it) => it.text).join(" "), 0, "", force);
   if (!items.every((it) => CLIPS.have.has(it.id))) { fallback(); return; }
   try {
     ac ||= new (window.AudioContext || window.webkitAudioContext)();
@@ -1037,7 +1042,7 @@ function rewardsView(t) {
 }
 const LANGS = { US: "American", GB: "British", AU: "Australian", IE: "Irish", IN: "Indian", ZA: "South African", NZ: "New Zealand", CA: "Canadian", SC: "Scottish" };
 const langName = (l) => LANGS[String(l).slice(3, 5).toUpperCase()] || l;
-const voicePanel = () => `<div class="panel"><h2>Voice</h2><p>Reading aloud with <b>${voice ? esc(voice.name) : "the device voice"}</b>, ${STYLES[vPref.style].name.toLowerCase()}. Set for this device only.</p><button class="mini" data-go="voices">Choose a voice 🔊</button></div>`;
+const voicePanel = () => `<div class="panel"><h2>Voice</h2><p>Reading aloud with <b>${voice ? esc(voice.name) : "the device voice"}</b>, ${STYLES[vPref.style].name.toLowerCase()}. Letter sounds and stories: <b>${READ_SETS[vPref.read]}</b>. Set for this device only.</p><button class="mini" data-go="voices">Choose a voice 🔊</button></div>`;
 function voicesView() {
   if (!("speechSynthesis" in window)) return `<div class="panel"><h2>Voices</h2><p>This browser can't read aloud.</p></div>`;
   const en = englishVoices(), great = en.some((v) => voiceScore(v) >= 40);
@@ -1045,7 +1050,8 @@ function voicesView() {
     const on = voice && v.voiceURI === voice.voiceURI, sc = voiceScore(v);
     return `<div class="li"><span class="grow"><b>${esc(v.name)}</b> <small>${esc(langName(v.lang))}</small> ${sc >= 40 ? `<span class="tag good">✨ Best</span>` : sc >= 20 ? `<span class="tag">Good</span>` : ""}</span><button class="mini soft" data-vplay="${esc(v.voiceURI)}">▶ Play</button><button class="mini" data-vuse="${esc(v.voiceURI)}" ${on ? "disabled" : ""}>${on ? "Using ✓" : "Use"}</button></div>`;
   }).join("");
-  return `<div class="panel"><h2>How it talks</h2><p>Tap one to hear it.</p><div class="form">${Object.entries(STYLES).map(([k, st]) => `<button class="mini${k === vPref.style ? "" : " soft"}" data-vstyle="${k}">${st.name}</button>`).join("")}</div></div>
+  return `<div class="panel"><h2>Reading voice</h2><p>For Letter Sounds and Stories. Tap one to hear it.</p><div class="form">${Object.entries(READ_SETS).map(([k, n]) => `<button class="mini${k === vPref.read ? "" : " soft"}" data-vread="${k}">${n}</button>`).join("")}</div></div>
+  <div class="panel"><h2>How it talks</h2><p>Tap one to hear it.</p><div class="form">${Object.entries(STYLES).map(([k, st]) => `<button class="mini${k === vPref.style ? "" : " soft"}" data-vstyle="${k}">${st.name}</button>`).join("")}</div></div>
   ${great ? "" : `<div class="panel"><h2>Get a better voice (free)</h2><p>This device only has basic voices. Apple's Premium voices sound much more natural:</p>
     <p><b>iPad or iPhone:</b> Settings → Accessibility → Read &amp; Speak (or Spoken Content) → Voices → English → tap <b>Ava (Premium)</b>, <b>Zoe (Premium)</b>, or <b>Evan (Enhanced)</b> to download. Then close and reopen this app.</p>
     <p><b>Mac:</b> System Settings → Accessibility → Spoken Content → System voice → Manage Voices → English → tick Ava (Premium) or Zoe (Premium).</p></div>`}
@@ -1143,8 +1149,13 @@ document.addEventListener("click", async (e) => {
     if (a === "cleartest") modal(`<span class="em">🧪</span><h2>Clear all test data?</h2>`, async () => { await fetch("/api/db", { method: "DELETE" }); location.reload(); });
     return;
   }
-  const vb = e.target.closest("[data-vplay],[data-vuse],[data-vstyle]");
+  const vb = e.target.closest("[data-vplay],[data-vuse],[data-vstyle],[data-vread]");
   if (vb) {
+    if (vb.dataset.vread && Object.hasOwn(READ_SETS, vb.dataset.vread)) {
+      vPref.read = vb.dataset.vread; saveVoice(); render();
+      loadClipIndex().then(() => speak([{ id: "p-0", text: `Great job, ${KID}!`, gap: 0.4 }, { id: "t-sam-2", text: "Sam sat on a mat." }], 0, true));
+      return;
+    }
     if (vb.dataset.vstyle && Object.hasOwn(STYLES, vb.dataset.vstyle)) { vPref.style = vb.dataset.vstyle; saveVoice(); render(); say(SAMPLE, 0, "praise", true); return; }
     const v = voices.find((x) => x.voiceURI === (vb.dataset.vplay || vb.dataset.vuse));
     if (!v) return;

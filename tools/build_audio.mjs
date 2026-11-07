@@ -5,7 +5,9 @@
 //   security add-generic-password -a "$USER" -s hamilton-tts -w
 // Then, from the app folder:
 //   node tools/build_audio.mjs --samples        voice samples in audio-samples/ to pick a voice
-//   node tools/build_audio.mjs --voice <name>   all clips (existing files are kept; add --force to redo)
+//   node tools/build_audio.mjs --set warm       all clips for one reading voice (existing files are kept; add --force to redo)
+//   node tools/build_audio.mjs --set bright
+// Each set goes to audio/<set>/ and must match READ_SETS in index.html.
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -14,7 +16,10 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2), flag = (f) => args.includes(f), opt = (f, d) => (args.includes(f) ? args[args.indexOf(f) + 1] : d);
-const VOICE = opt("--voice", "en-US-Neural2-F"), RATE = +opt("--rate", "0.9");
+const SETS = { warm: "en-US-Neural2-F", bright: "en-US-Neural2-H" };
+const SET = opt("--set", "warm"), RATE = +opt("--rate", "0.9");
+if (!Object.hasOwn(SETS, SET)) { console.error(`Unknown --set ${SET}. Use: ${Object.keys(SETS).join(", ")}`); process.exit(1); }
+const VOICE = SETS[SET];
 const SAMPLE_VOICES = ["en-US-Neural2-F", "en-US-Neural2-H", "en-US-Neural2-C", "en-US-Neural2-D", "en-US-Wavenet-F", "en-US-Wavenet-H"];
 
 function apiKey() {
@@ -60,7 +65,7 @@ if (flag("--samples")) {
   process.exit(0);
 }
 
-const dir = path.join(ROOT, "audio");
+const dir = path.join(ROOT, "audio", SET);
 fs.mkdirSync(dir, { recursive: true });
 const todo = specs.filter((s) => flag("--force") || !fs.existsSync(path.join(dir, s.id + ".mp3")));
 let done = 0, failed = [];
@@ -73,5 +78,5 @@ await Promise.all(Array.from({ length: 4 }, async () => {
 }));
 const have = specs.map((s) => s.id).filter((id) => fs.existsSync(path.join(dir, id + ".mp3"))).sort();
 fs.writeFileSync(path.join(dir, "index.json"), JSON.stringify(have));
-console.log(`Voice ${VOICE}: made ${done}, skipped ${specs.length - todo.length}, failed ${failed.length}, total ${have.length}/${specs.length}`);
+console.log(`${SET} (${VOICE}): made ${done}, skipped ${specs.length - todo.length}, failed ${failed.length}, total ${have.length}/${specs.length}`);
 if (failed.length) { console.log(failed.slice(0, 10).join("\n")); process.exit(1); }

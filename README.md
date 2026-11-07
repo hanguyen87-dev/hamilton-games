@@ -23,7 +23,7 @@ A private, phone-first learning game for Hamilton (almost 5), built from the SAT
 
 - **Letter Sounds** game: sounds in teaching order (m, s, a, t, p, i, n, f, o, d, c, h, e, r, …), first sounds, blending by ear (/k/ /a/ /t/ → 🐱), reading words with tap-to-hear letter tiles and a 🐢 Sound it out button.
 - **Stories**: 12 short books written for him in `data/reading.json`, using only sounds he's learning plus a few sight words (the, is, a, I, …). Tapping a word sounds it out, then says it.
-- **Voice clips**: `audio/*.mp3` made once by `tools/build_audio.mjs` with a Google Cloud Text-to-Speech voice (pure sounds like /k/, which the device voice can't say). The clip list comes from `clipSpecs()` in `index.html`. Missing clips fall back to the device voice. The API key lives in the Mac Keychain (`hamilton-tts`), never in files. After changing reading content, rerun the script and redeploy.
+- **Voice clips**: `audio/<set>/*.mp3` made once by `tools/build_audio.mjs --set warm|bright` with Google Cloud Text-to-Speech voices (warm = en-US-Neural2-F, bright = en-US-Neural2-H, picked on the Voice page). They say pure sounds like /k/, which the device voice can't. The clip list comes from `clipSpecs()` in `index.html`. Missing clips fall back to the device voice. The API key lives in the Mac Keychain (`hamilton-tts`), never in files. After changing reading content, rerun the script and redeploy.
 
 ## Stars and prizes
 
