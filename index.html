@@ -257,6 +257,17 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
 .levelup .burst { font-size: 7.5rem; line-height: 1; display: inline-block; animation: spin 1.4s ease-out, pop 1.6s 1.4s ease-in-out infinite; }
 .levelup h1 { font-size: clamp(2.8rem, 12vw, 3.6rem); color: var(--brand); letter-spacing: .04em; }
 .levelup .won { font-size: 6rem; line-height: 1; animation: spin 1.2s .6s ease-out both; }
+/* library */
+.row.topic { cursor: default; flex-wrap: wrap; }
+.row.topic:active { transform: none; box-shadow: var(--shadow); }
+.tbtns { flex: 1 0 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding-left: 66px; }
+.tbtns .mini { padding: 10px 12px; font-size: 1.05rem; }
+.ico.lnum { font-size: 1.4rem; font-weight: 800; color: var(--brand); background: var(--bg); border: 2px solid var(--line); border-radius: 50%; width: 46px; height: 46px; display: grid; place-items: center; }
+.flagrow { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; font-size: clamp(3rem, 15vw, 4rem); }
+.flagrow span { display: grid; justify-items: center; line-height: 1.1; }
+.flagrow small { font-size: .95rem; font-weight: 800; color: var(--muted); }
+.week { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 460px; }
+.week span { background: var(--surface); border: 2px solid var(--line); border-radius: 12px; padding: 6px 10px; font-weight: 800; }
 /* trophy room */
 .shelf { background: var(--surface); border: 2px solid var(--line); border-radius: 20px; padding: 12px 14px; margin-bottom: 14px; box-shadow: var(--shadow); }
 .shelf h2 { margin: 0 0 8px; font-size: 1.15rem; }
@@ -303,6 +314,8 @@ const GAMES = [
   { id: "states", ico: "🗺️", name: "50 States", sub: "Find states and capitals" },
   { id: "flags", ico: "🚩", name: "Flags", sub: "Flags of the world" },
   { id: "countries", ico: "🌍", name: "Countries", sub: "Countries, continents, capitals" },
+  { id: "continents", ico: "🌎", name: "Continents", sub: "The 7 continents" },
+  { id: "shapes", ico: "🔷", name: "Shapes", sub: "Shapes and sides" },
 ];
 // Must match SHOP_COST in api/db.js.
 const SHOP = [
@@ -346,7 +359,7 @@ function others(list, target, n, near) {
 }
 
 // ---------- state + saving ----------
-const S = { role: "student", space: "his", data: {}, view: "home", round: null, sound: true, api: true, level: 1, lesson: null };
+const S = { role: "student", space: "his", data: {}, view: "home", round: null, sound: true, api: true, level: 1, lesson: null, topic: null, ctx: null };
 const PARENT_WRITES = new Set(["grants", "freezes", "redemptions"]);
 try { S.sound = localStorage.getItem("hgt-sound") !== "off"; } catch { /* storage blocked */ }
 const LOCAL = new Set(["localhost", "127.0.0.1", ""]);
@@ -577,7 +590,7 @@ async function ensureData(g) {
 function usMap(opt = {}) {
   const { w, h, states } = GEO.us;
   let s = `<svg class="map${opt.tap ? " tap" : ""}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Map of the United States">`;
-  states.forEach((st, i) => { s += `<path data-i="${i}" class="${i === opt.hl ? "hl" : ""}" d="${st.d}"/>`; });
+  states.forEach((st, i) => { s += `<path data-i="${i}" class="${i === opt.hl || (opt.hls && opt.hls.includes(i)) ? "hl" : ""}" d="${st.d}"/>`; });
   if (opt.hl != null && states[opt.hl].area < 1500) { const [x, y] = states[opt.hl].c; s += `<circle class="ring" cx="${x}" cy="${y}" r="30"/>`; }
   return `<div class="mapbox">${s}</svg></div>`;
 }
@@ -802,6 +815,38 @@ const GEN = {
     const labels = lv <= 3;
     const type = pick(only || [["which", "pennies"], ["name", "pennies", "nickels"], ["value", "mix", "name"], ["more", "mix", "value"], ["mix", "mix", "groups", "more"]][lv - 1]);
     const ks = ["q", "d", "n", "p"];
+    if (type === "face") {
+      const k = pick(["p", "n", "d", "q"]), opts = shuffle([k, ...sample(["p", "n", "d", "q"].filter((x) => x !== k), 2)]);
+      if (Math.random() < 0.5) {
+        return { key: `facer${k}`, prompt: `Which coin has ${FACE[k]}?`, say: `Which coin has ${FACE[k]} on it?`, pic: "",
+          choices: opts.map((o) => ({ key: o, html: coinSvg(o, true, 1.3), kind: "pic", say: "" })), answer: k, after: `${FACE[k]} is on the ${COIN[k].name}.` };
+      }
+      return { key: `face${k}`, prompt: `Who is on the ${COIN[k].name}?`, say: `Whose face is on the ${COIN[k].name}? Is it ${listOf(opts.map((o) => FACE[o]))}?`, pic: coinsPic([k], true, 1.8),
+        choices: opts.map((o) => ({ key: o, html: FACE[o], say: FACE[o], kind: "text" })), answer: k, after: `${FACE[k]} is on the ${COIN[k].name}.` };
+    }
+    if (type === "byfive" || type === "dimes") {
+      const k = type === "byfive" ? "n" : "d", v = COIN[k].v, n = rnd(2, type === "byfive" ? 8 : 9), total = n * v;
+      return { key: `${type}${n}`, prompt: "How much money?", say: `How much money? Count the ${COIN[k].name}s by ${v}s.`, pic: coinsPic(Array(n).fill(k), labels, 1),
+        choices: numCh(numChoices(total, 4, v, 100, [v, 2 * v]), "¢"), answer: String(total), after: `${Array.from({ length: n }, (_, i) => (i + 1) * v).join(", ")}. ${cents(total)}!` };
+    }
+    if (type === "make") {
+      const target = pick([10, 15, 20, 25, 30, 35]), good = makeCoins(target), bad = shuffle([target - 5, target + 5, target + 10].filter((x) => x > 0)).slice(0, 2).map(makeCoins);
+      const opts = shuffle([["a", good], ["b", bad[0]], ["c", bad[1]]]);
+      return { key: `make${target}${good.join("")}`, prompt: `Which coins make ${target}¢?`, say: `Which coins make ${cents(target)}?`, pic: "", wide: true,
+        choices: opts.map(([k2, list]) => ({ key: k2, html: coinsPic(list, labels, 0.75), kind: "pic", say: "" })), answer: opts.find((o) => o[1] === good)[0],
+        after: `${good.map((x) => COIN[x].name).join(", ")}: that's ${cents(target)}!` };
+    }
+    if (type === "dollar") {
+      const k = pick(["q", "d", "n", "p"]), n = 100 / COIN[k].v;
+      if (Math.random() < 0.4) {
+        const q = rnd(1, 4), v = q * 25;
+        return { key: `dq${q}`, prompt: "How much money?", say: "How much money are these quarters?", pic: coinsPic(Array(q).fill("q"), labels, 1.1),
+          choices: numCh([25, 50, 75, 100].filter((x) => x !== v).slice(0, 3).concat(v).sort((a, b) => a - b), "¢"), answer: String(v),
+          after: `${Array.from({ length: q }, (_, i) => (i + 1) * 25).join(", ")}. ${v === 100 ? "That's 100 cents: one dollar!" : cents(v) + "!"}` };
+      }
+      return { key: `dollar${k}`, prompt: `How many ${COIN[k].name === "penny" ? "pennies" : COIN[k].name + "s"} make one dollar?`, say: `How many ${COIN[k].name === "penny" ? "pennies" : COIN[k].name + "s"} make one dollar?`, pic: coinsPic([k], labels, 1.6),
+        choices: numCh([4, 10, 20, 100]), answer: String(n), after: `${n} ${COIN[k].name === "penny" ? "pennies" : COIN[k].name + "s"} make one dollar. That's 100 cents!` };
+    }
     if (type === "which") {
       const k = pick(["p", "n", "d"]), opts = shuffle(["p", "n", "d"]);
       return { key: `w${k}`, prompt: `Which one is a ${COIN[k].name}?`, say: `Which coin is a ${COIN[k].name}?`, pic: "",
@@ -858,16 +903,21 @@ const GEN = {
       after: `It's ${spoken(key)}!${m === 0 && lv <= 2 ? " The long hand points straight up." : ""}` };
   },
 
-  states(lv, only) {
-    const all = GEO.us.states, idx = (st) => all.indexOf(st);
+  states(lv, only, xo = {}) {
+    const every = GEO.us.states, idx = (st) => every.indexOf(st), all = xo.region ? every.filter((st) => REGION[st.abbr] === xo.region) : every;
     const pools = [all.filter((s) => s.area >= 7500 || ["FL", "NY", "GA"].includes(s.abbr)), all.filter((s) => s.area >= 4000), all.filter((s) => s.area >= 1500 || s.abbr === "HI"), all.filter((s) => s.area >= 800 || s.abbr === "HI"), all];
     const findPool = [pools[0], pools[0], pools[1], pools[2], all.filter((s) => s.area >= 1000)][lv - 1];
     const type = pick(only || [["which"], ["which", "find"], ["which", "shape", "find"], ["which", "shape", "capital", "find"], ["which", "capital", "nick", "abbr", "find", "shape"]][lv - 1]);
     const pool = pools[lv - 1], n = lv === 1 ? 2 : 3, near = lv >= 4;
+    if (type === "region") {
+      const st = pick(all), regs = shuffle(Object.keys(REGIONS));
+      return { key: `rg${st.abbr}`, prompt: `Which region is ${st.name} in?`, say: `Which part of the country is ${st.name} in? Is it the ${listOf(regs)}?`, pic: usMap({ hl: idx(st) }),
+        choices: regs.map((r2) => ({ key: r2, html: r2, say: "the " + r2, kind: "text" })), answer: REGION[st.abbr], after: `${st.name} is in the ${REGION[st.abbr]}.` };
+    }
     if (type === "find") {
       const st = pick(findPool);
       return { key: `f${st.abbr}`, tap: true, prompt: `Find ${st.name}!`, say: `Can you find ${st.name}? Tap it on the map.`, pic: usMap({ tap: true }), answer: String(idx(st)),
-        tapName: (i) => all[i].name, after: `That's ${st.name}! Its capital is ${st.capital}.` };
+        tapName: (i) => every[i].name, after: `That's ${st.name}! Its capital is ${st.capital}.` };
     }
     const st = pick(type === "capital" ? pools[2] : pool), wrong = others(type === "which" || type === "shape" ? pool : all, st, n, near), opts = shuffle([st, ...wrong]);
     const nameCh = opts.map((o) => ({ key: o.abbr, html: o.name, say: o.name, kind: "text" }));
@@ -887,10 +937,10 @@ const GEN = {
       pic: type === "shape" ? shapeOf(st) : usMap({ hl: idx(st) }), choices: nameCh, answer: st.abbr, after: `That's ${st.name}! Its capital is ${st.capital}.` };
   },
 
-  flags(lv, only) {
+  flags(lv, only, xo = {}) {
     const all = GEO.world.countries, famous = all.filter((c) => FAMOUS.includes(c.iso));
     const type = pick(only || [["find"], ["name"], ["find", "name"], ["find", "name"], ["name", "capital", "where"]][lv - 1]);
-    const pool = lv <= 2 ? famous : all, n = lv <= 2 ? 2 : 3, c = pick(pool);
+    const pool = xo.cont ? all.filter((c) => c.cont.includes(xo.cont)) : lv <= 2 ? famous : all, n = lv <= 2 ? 2 : 3, c = pick(pool);
     const similar = lv >= 4 ? shuffle(LOOKALIKE.filter((g) => g.includes(c.iso)).flat().filter((iso) => iso !== c.iso)).map((iso) => all.find((x) => x.iso === iso)).filter(Boolean) : [];
     const wrong = [...new Set([...similar, ...others(pool, c, n)])].filter((x) => x !== c).slice(0, n), opts = shuffle([c, ...wrong]);
     if (type === "find") {
@@ -949,10 +999,20 @@ const GEN = {
       choices: opts.map(([x]) => ({ key: x, html: esc(x), kind: "word", say: "" })), answer: w, after: `${cap(w)}!`, afterClips: soundOut(w, 0.3) };
   },
 
-  countries(lv, only) {
+  countries(lv, only, xo = {}) {
     const all = GEO.world.countries, idx = (c) => all.indexOf(c);
     const huge = all.filter((c) => c.area >= 2400), big = all.filter((c) => c.area >= 700), mid = all.filter((c) => c.area >= 190);
     const type = pick(only || [["which"], ["which", "find"], ["which", "continent", "find"], ["continent", "capital", "which", "find"], ["which", "capital", "continent", "find"]][lv - 1]);
+    if (type === "landmark") {
+      const [em, place, iso] = pick(LANDMARKS), c = all.find((x) => x.iso === iso), opts2 = shuffle([c, ...others(all.filter((x) => !LANDMARKS.some((l) => l[2] === x.iso) || x === c), c, 2)]);
+      return { key: `lm${place}`, prompt: `Where is ${place}?`, say: `Which country is ${place} in? Is it ${listOf(opts2.map((o) => the(o.name)))}?`, pic: `<div class="flagbig">${em}</div>`,
+        choices: opts2.map((o) => ({ key: o.iso, html: `${flag(o.iso)} ${o.name}`, say: o.name, kind: "text" })), answer: iso, after: `${cap(place)} is in ${the(c.name)}! ${flag(iso)}` };
+    }
+    if (xo.cont && type === "which") {
+      const pool = all.filter((x) => x.cont.includes(xo.cont)), c = pick(pool), o2 = shuffle([c, ...others(pool, c, Math.min(3, pool.length - 1))]);
+      return { key: `wk${c.iso}`, prompt: "Which country is this?", say: `Which country is orange? Is it ${listOf(o2.map((o) => o.name))}?`, pic: worldMap({ hl: idx(c), zoom: true }),
+        choices: o2.map((o) => ({ key: o.iso, html: o.name, say: o.name, kind: "text" })), answer: c.iso, after: `That's ${the(c.name)}! ${flag(c.iso)}` };
+    }
     if (type === "find") {
       const c = pick(lv <= 3 ? huge : big);
       return { key: `wf${c.iso}`, tap: true, prompt: `Find ${the(c.name)}!`, say: `Can you find ${the(c.name)}? Tap it on the map.`, pic: worldMap({ tap: true }), answer: String(idx(c)),
@@ -974,6 +1034,11 @@ const GEN = {
       choices: opts.map((o) => ({ key: o.iso, html: o.name, say: o.name, kind: "text" })), answer: c.iso, after: `That's ${the(c.name)}! ${flag(c.iso)}` };
   },
 };
+// U.S. Census Bureau regions.
+const REGIONS = { West: "WA OR CA NV ID MT WY UT CO AZ NM AK HI", Midwest: "ND SD NE KS MN IA MO WI IL MI IN OH", South: "TX OK AR LA MS AL TN KY FL GA SC NC VA WV MD DE", Northeast: "PA NY NJ CT RI MA VT NH ME" };
+const REGION = Object.fromEntries(Object.entries(REGIONS).flatMap(([r, list]) => list.split(" ").map((a) => [a, r])));
+const LANDMARKS = [["🗼", "the Eiffel Tower", "FR"], ["🗽", "the Statue of Liberty", "US"], ["🏛️", "the Colosseum", "IT"], ["🕌", "the Taj Mahal", "IN"], ["🗻", "Mount Fuji", "JP"],
+  ["🧱", "the Great Wall", "CN"], ["🔺", "the Great Pyramids", "EG"], ["🕰️", "Big Ben", "GB"], ["🎭", "the Sydney Opera House", "AU"], ["⛰️", "Machu Picchu", "PE"], ["🌉", "the Golden Gate Bridge", "US"]];
 const FAMOUS = ["US", "CA", "MX", "BR", "GB", "FR", "DE", "IT", "ES", "JP", "CN", "IN", "AU", "KR", "VN", "EG", "KE", "ZA", "RU", "GR", "IE", "SE", "AR"];
 const LOOKALIKE = [["FR", "IT", "IE", "BE", "MX", "NG"], ["DE", "NL", "RU", "AT", "BO", "GH", "ET"], ["CO", "EC", "VE"], ["NO", "SE", "FI", "DK", "IS"],
   ["PL", "ID", "JP", "AT"], ["US", "MY", "UY", "CL", "CU", "PA"], ["AU", "NZ", "GB"], ["JP", "KR", "CN", "VN"], ["IN", "IE", "NE", "CI"], ["CH", "DK", "TR"], ["GR", "UY", "IL"], ["EG", "IQ", "YE", "SY"]];
@@ -981,6 +1046,16 @@ const LOOKALIKE = [["FR", "IT", "IE", "BE", "MX", "NG"], ["DE", "NL", "RU", "AT"
 const COIN = { p: { name: "penny", v: 1, mm: 19.05, c: ["#E29A62", "#9C5428"], txt: "1¢" }, n: { name: "nickel", v: 5, mm: 21.2, c: ["#E9EBEE", "#9BA1A9"], txt: "5¢" },
   d: { name: "dime", v: 10, mm: 17.9, c: ["#F2F3F5", "#A4AAB2"], txt: "10¢", reed: 1 }, q: { name: "quarter", v: 25, mm: 24.3, c: ["#EEF0F2", "#9EA4AC"], txt: "25¢", reed: 1 } };
 const cents = (v) => v === 1 ? "1 cent" : v + " cents";
+const FACE = { p: "Abraham Lincoln", n: "Thomas Jefferson", d: "Franklin D. Roosevelt", q: "George Washington" };  // U.S. Mint
+// A random handful of coins worth exactly v cents (no more than 7 coins).
+function makeCoins(v) {
+  for (let t = 0; t < 50; t++) {
+    const list = []; let left = v;
+    while (left > 0 && list.length < 7) { const k = pick(["q", "d", "n", "p"].filter((x) => COIN[x].v <= left && (x !== "p" || left < 5 || Math.random() < 0.2))); list.push(k); left -= COIN[k].v; }
+    if (left === 0) return list.sort((a, b) => COIN[b].v - COIN[a].v);
+  }
+  return Array(v / 5).fill("n");
+}
 const sum = (list) => list.reduce((s, k) => s + COIN[k].v, 0);
 // A handful of coins for counting, biggest first, kept to totals right for the level.
 function coinSet(lv) {
@@ -1254,18 +1329,23 @@ const LEVELS = [
   { n: 20, em: "👑", name: "Crown Castle", soon: "The big review: earn the crown!" },
 ];
 const gradeOf = (n) => GRADES.findIndex((g) => n <= g.last);
-const lessonById = (id) => { for (const L of LEVELS) for (const ls of L.lessons || []) if (ls.id === id) return [L, ls]; return [null, null]; };
+function lessonById(id) {
+  for (const L of LEVELS) for (const ls of L.lessons || []) if (ls.id === id) return [L, ls];
+  for (const t of TOPICS) for (const ls of t.lessons) if (typeof ls !== "string" && ls.id === id) return [null, ls];
+  return [null, null];
+}
 const lessonStars = (doc) => !doc ? 0 : doc.n >= LESSON_Q ? 3 : doc.n >= LESSON_Q - 1 ? 2 : 1;
 function levelDone(n, data = S.data) {
   const L = LEVELS[n - 1], ls = data.lessons || {};
-  return !!L && !!L.lessons && (!!(ls["c" + n] && ls["c" + n].pass) || L.lessons.every((x) => ls[x.id]));
+  // Done by: the placement quiz, the level challenge, or every lesson (an Adventure lesson also counts when its library lessons are passed).
+  return !!L && !!L.lessons && (n <= ((ls.place || {}).lv || 0) || !!(ls["c" + n] && ls["c" + n].pass) || L.lessons.every((x) => lsDone(x, data)));
 }
 const unlocked = (n) => n === 1 || levelDone(n - 1) || levelDone(n);
 function currentLevel() { for (const L of LEVELS) if (L.lessons && !levelDone(L.n)) return L.n; const last = LEVELS.filter((L) => L.lessons).pop(); return last.n; }
 // Stars from the Adventure (lessons, levels, trophies), counted from the saved lessons.
 function adventureStars(data = S.data) {
   let lessons = 0, levels = 0, trophies = 0;
-  for (const [id, d] of Object.entries(data.lessons || {})) if (!id.startsWith("c") && d) lessons++;
+  for (const [id, d] of Object.entries(data.lessons || {})) if (d && id !== "place" && !/^c\d+$/.test(id)) lessons++;
   for (const L of LEVELS) if (levelDone(L.n, data)) levels++;
   for (const g of GRADES) {
     const all = LEVELS.filter((L) => L.n <= g.last && L.n > (GRADES[GRADES.indexOf(g) - 1]?.last || 0));
@@ -1274,6 +1354,249 @@ function adventureStars(data = S.data) {
   return { lessons, levels, stars: lessons * LESSON_STARS + levels * LEVEL_STARS + trophies };
 }
 const gradeDone = (gi) => LEVELS.filter((L) => L.n <= GRADES[gi].last && L.n > (GRADES[gi - 1]?.last || 0)).every((L) => levelDone(L.n));
+
+// ---------- lesson library: pick a topic, then Learn (lessons) or Play (the game) ----------
+// Each topic is a list of lessons, easy to hard. Some are the Adventure's own lessons (listed by id); the rest live only here.
+// Facts: U.S. Mint (coins), U.S. Census Bureau (regions), CIA World Factbook (countries, capitals, flags). Order: Common Core and the Core Knowledge Sequence.
+const PASS_N = 4;  // a lesson is "passed" with 4 of 5 right on the first try; passed library lessons count for the Adventure (LIB)
+const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const SEASONS = [["winter", "⛄", "It's cold, and it might snow!"], ["spring", "🌷", "Flowers bloom and baby animals are born."],
+  ["summer", "🏖️", "It's hot. Time for the beach!"], ["fall", "🍂", "Leaves change color and fall off the trees."]];
+const AMPM = [["🌅", "You wake up", 7, "am"], ["🍳", "You eat breakfast", 8, "am"], ["🏫", "School starts", 8, "am"], ["🥪", "You eat lunch", 12, "pm"],
+  ["⚽", "You play after school", 4, "pm"], ["🍽️", "You eat dinner", 6, "pm"], ["🛁", "You take a bath", 7, "pm"], ["🌙", "You go to bed", 8, "pm"]];
+Object.assign(GEN, {
+  time(lv, only) {
+    const type = pick(only || ["days", "months", "seasons", "ampm", "later"]), txt = (list) => list.map((x) => ({ key: x, html: x, say: x, kind: "text" }));
+    if (type === "days" || type === "months") {
+      const L = type === "days" ? DAYS : MONTHS, unit = type === "days" ? "day" : "month";
+      if (Math.random() < 0.2) {
+        const n = L.length, opts = type === "days" ? [5, 7, 10, 12] : [7, 10, 12, 24];
+        return { key: `${type}n`, prompt: `How many ${unit}s are in a ${type === "days" ? "week" : "year"}?`, say: `How many ${unit}s are in a ${type === "days" ? "week" : "year"}?`, pic: `<div class="flagbig">📅</div>`,
+          choices: numCh(opts), answer: String(n), after: `A ${type === "days" ? "week" : "year"} has ${n} ${unit}s.` };
+      }
+      const i = rnd(0, L.length - 1), fwd = Math.random() < 0.6, ans = L[(i + (fwd ? 1 : L.length - 1)) % L.length];
+      const opts = shuffle([ans, ...sample(L.filter((x) => x !== ans && x !== L[i]), 2)]);
+      return { key: `${type}${fwd ? "a" : "b"}${i}`, prompt: `What ${unit} comes ${fwd ? "after" : "before"} ${L[i]}?`, say: `What ${unit} comes ${fwd ? "after" : "before"} ${L[i]}?`, pic: `<div class="flagbig">📅</div>`,
+        choices: txt(opts), answer: ans, after: fwd ? `${L[i]}, then ${ans}!` : `${ans}, then ${L[i]}!` };
+    }
+    if (type === "seasons") {
+      const i = rnd(0, 3), [name, em, clue] = SEASONS[i];
+      if (Math.random() < 0.5) {
+        const nx = SEASONS[(i + 1) % 4][0], opts = shuffle([nx, ...sample(SEASONS.map((x) => x[0]).filter((x) => x !== nx && x !== name), 2)]);
+        return { key: `sn${i}`, prompt: `What season comes after ${name}?`, say: `What season comes after ${name}?`, pic: `<div class="flagbig">${em}</div>`, choices: txt(opts), answer: nx, after: `${cap(name)}, then ${nx}!` };
+      }
+      const opts = shuffle([name, ...sample(SEASONS.map((x) => x[0]).filter((x) => x !== name), 2)]);
+      return { key: `sw${i}`, prompt: "Which season is it?", say: `${clue} Which season is it?`, pic: `<div class="flagbig">${em}</div>`, choices: txt(opts), answer: name, after: `It's ${name}! ${clue}` };
+    }
+    if (type === "ampm") {
+      const [em, ev, h, ap] = pick(AMPM);
+      return { key: `ap${ev}`, prompt: `${ev} at ${h}:00. Is it a.m. or p.m.?`, say: `${ev} at ${h} o'clock. Is it A.M., or P.M.?`, pic: `<div class="flagbig">${em}</div>`,
+        choices: [{ key: "am", html: "a.m.", say: "A.M., the morning", kind: "text" }, { key: "pm", html: "p.m.", say: "P.M., after noon", kind: "text" }], answer: ap,
+        after: ap === "am" ? "a.m. is the morning." : h === 12 ? "12:00 noon is p.m." : "p.m. is after noon: the afternoon and night." };
+    }
+    const h = rnd(1, 9), n = rnd(1, 3), ans = h + n, opts = shuffle([...new Set([ans, ans - 1, ans + 1].filter((x) => x >= 1 && x <= 12))]).slice(0, 3);
+    return { key: `lt${h}+${n}`, prompt: `It's ${h}:00. What time will it be in ${plural(n, "hour", "hours")}?`, say: `It's ${h} o'clock. What time will it be in ${plural(n, "hour", "hours")}?`, pic: clockSvg(h, 0),
+      choices: opts.map((x) => ({ key: String(x), html: `${x}:00`, say: `${x} o'clock`, kind: "text" })), answer: String(ans),
+      after: `${Array.from({ length: n }, (_, i) => `${h + i + 1} o'clock`).join(", ")}. It will be ${ans}:00!` };
+  },
+});
+const flagRow = (isos) => `<div class="flagrow">${isos.map((iso) => `<span>${flag(iso)}<small>${esc((GEO.world.countries.find((c) => c.iso === iso) || {}).name || iso)}</small></span>`).join("")}</div>`;
+const hlState = (ab) => usMap({ hl: GEO.us.states.findIndex((x) => x.abbr === ab) });
+const hlCountry = (iso, zoom = true) => worldMap({ hl: GEO.world.countries.findIndex((c) => c.iso === iso), zoom });
+const regionMap = (r) => usMap({ hls: GEO.us.states.map((st, i) => (REGION[st.abbr] === r ? i : -1)).filter((i) => i >= 0) });
+const regionNames = (r) => listOf(GEO.us.states.filter((st) => REGION[st.abbr] === r).map((st) => st.name)).replace(", or ", ", and ");
+const contIsos = (cont) => GEO.world.countries.filter((c) => c.cont.includes(cont)).sort((a, b) => b.area - a.area).map((c) => c.iso);
+const LS = (id, s, t, p, slides, data) => ({ id, s, t, p, slides, data });
+function regionLesson(n, r, facts) {
+  return LS(`states.${n}`, "world", `The ${r}`, { g: "states", lv: 5, only: ["which", "find"], opts: { region: r } }, () => [
+    T.show(regionMap(r), `These states are in the ${r}: ${regionNames(r)}.`), ...facts.map(([ab, text]) => T.show(hlState(ab), text))], "states");
+}
+function flagLesson(n, cont, title) {
+  return LS(`flags.${n}`, "world", `Flags of ${title || cont}`, { g: "flags", lv: 3, only: ["find", "name"], opts: { cont } }, () => {
+    const isos = contIsos(cont), out = [];
+    for (let i = 0; i < isos.length; i += 4) out.push(T.show(flagRow(isos.slice(i, i + 4)), `Flags from ${title || cont}: ${listOf(isos.slice(i, i + 4).map((iso) => the(GEO.world.countries.find((c) => c.iso === iso).name))).replace(", or ", ", and ")}.`));
+    return out.slice(0, 4);
+  }, "flags");
+}
+function countryLesson(n, cont, facts) {
+  return LS(`countries.${n}`, "world", `Countries of ${cont}`, { g: "countries", lv: 3, only: ["which"], opts: { cont } }, () => [
+    T.show(contMap({ hl: cont === "Oceania" ? "Australia" : cont }), `Let's meet some countries in ${cont}!`), ...facts.map(([iso, text]) => T.show(hlCountry(iso), text))], "countries");
+}
+const TOPICS = [
+  { id: "coins", game: "coins", ico: "🪙", name: "Coins", lessons: [
+    LS("coins.1", "math", "Penny and nickel", { g: "coins", lv: 2, only: ["which", "name"] }, () => [
+      T.show(coinsPic(["p"], true, 1.8), "This is a penny. It's worth 1 cent. It's copper colored, and Abraham Lincoln is on it."),
+      T.show(coinsPic(["n"], true, 1.8), "This is a nickel. It's worth 5 cents. Thomas Jefferson is on it."),
+      T.show(coinsPic(["n", "p", "p", "p", "p", "p"], true, 1.1), "A nickel is bigger than a penny, and worth more. 5 pennies make a nickel!"),
+      T.show(`<div class="flagbig">🏛️</div>`, "Fun fact: the United States made its last new pennies in 2025. The pennies we have still work as money!")]),
+    LS("coins.2", "math", "Dime and quarter", { g: "coins", lv: 4, only: ["name", "value"] }, () => [
+      T.show(coinsPic(["d"], true, 1.8), "This is a dime. It's worth 10 cents. It's the smallest coin, but it's worth more than a penny or a nickel!"),
+      T.show(coinsPic(["q"], true, 1.8), "This is a quarter. It's worth 25 cents."),
+      T.show(coinsPic(["d", "q", "p", "n"], true, 1.2), "Dimes and quarters have tiny ridges all around the edge. Pennies and nickels are smooth.")]),
+    LS("coins.3", "math", "Who is on the coin?", { g: "coins", lv: 3, only: ["face"] }, () => ["p", "n", "d", "q"].map((k) =>
+      T.show(coinsPic([k], true, 1.8), `${FACE[k]} is on the ${COIN[k].name}.${k === "d" || k === "q" ? " Some years have special designs, too!" : ""}`))),
+    LS("coins.4", "math", "Small but worth more", { g: "coins", lv: 4, only: ["more", "groups"] }, () => [
+      T.show(coinsPic(["d", "n"], true, 1.6), "The dime is smaller than the nickel, but it's worth more! 10 cents is more than 5 cents."),
+      T.show(coinsPic(["q", "d", "n", "p"], true, 1.2), "From most to least: quarter 25, dime 10, nickel 5, penny 1. Don't pick by size. Think about what each coin is worth!")]),
+    LS("coins.5", "math", "Counting pennies", { g: "coins", lv: 1, only: ["pennies"] }, () => [
+      T.show(coinsPic(Array(6).fill("p"), true, 1.1), "Each penny is 1 cent. Count them: 1, 2, 3, 4, 5, 6. That's 6 cents!")]),
+    LS("coins.6", "math", "Count nickels by 5s", { g: "coins", lv: 3, only: ["byfive"] }, () => [
+      T.show(`<div class="bignum">5 10 15 20 25 30</div>`, "Counting by 5s goes: 5, 10, 15, 20, 25, 30!"),
+      T.show(coinsPic(Array(4).fill("n"), true, 1.2), "Count nickels by 5s: 5, 10, 15, 20. That's 20 cents!")]),
+    LS("coins.7", "math", "Count dimes by 10s", { g: "coins", lv: 3, only: ["dimes"] }, () => [
+      T.show(coinsPic(Array(5).fill("d"), true, 1.2), "Count dimes by 10s: 10, 20, 30, 40, 50. That's 50 cents!")]),
+    LS("coins.8", "math", "Counting mixed coins", { g: "coins", lv: 3, only: ["mix"] }, () => [
+      T.show(coinsPic(["q", "d", "n", "p"], true, 1.2), "Start with the coin worth the most. 25, then 35, 40, 41. That's 41 cents!"),
+      T.show(coinsPic(["d", "d", "n", "p", "p"], true, 1.2), "10, 20, 25, 26, 27. That's 27 cents!")]),
+    LS("coins.9", "math", "Make 25 cents", { g: "coins", lv: 3, only: ["make"] }, () => [
+      T.show(coinsPic(["q"], true, 1.8), "One quarter is 25 cents."), T.show(coinsPic(["d", "d", "n"], true, 1.4), "2 dimes and a nickel: 10, 20, 25. That's 25 cents too!"),
+      T.show(coinsPic(Array(5).fill("n"), true, 1.1), "5 nickels: 5, 10, 15, 20, 25. 25 cents again! Different coins can make the same amount.")]),
+    LS("coins.10", "math", "A dollar is 100 cents", { g: "coins", lv: 4, only: ["dollar"] }, () => [
+      T.show(`<div class="flagbig">💵</div>`, "One dollar is worth 100 cents."), T.show(coinsPic(Array(4).fill("q"), true, 1.2), "4 quarters make a dollar: 25, 50, 75, 100!"),
+      T.show(coinsPic(Array(10).fill("d"), true, 0.9), "10 dimes make a dollar. 20 nickels or 100 pennies make a dollar too!")]),
+  ] },
+  { id: "time", game: "clock", ico: "⏰", name: "Clock and time", lessons: [
+    LS("time.1", "math", "Parts of a clock", { g: "clock", lv: 1 }, () => [
+      T.show(clockSvg(12, 0), "A clock has the numbers 1 to 12 in a circle."), T.show(clockSvg(3, 0), "The short hand is the hour hand. Here it points to 3."),
+      T.show(clockSvg(3, 0), "The long hand is the minute hand. Here it points straight up to 12.")]),
+    LS("time.2", "math", "O'clock", { g: "clock", lv: 2 }, () => [
+      T.show(clockSvg(5, 0), "When the long hand points up to 12, it's o'clock. The short hand points to 5, so it's 5 o'clock!"),
+      T.show(clockSvg(9, 0), "The short hand points to 9. It's 9 o'clock."), T.show(`<div class="digital">9:00</div>`, "A digital clock shows 9 o'clock like this.")]),
+    LS("time.3", "math", "Half past", { g: "clock", lv: 3 }, () => [
+      T.show(clockSvg(2, 30), "When the long hand points down to 6, it's half past. Half past 2 is 2:30."),
+      T.show(clockSvg(6, 30), "At half past, the short hand is halfway between two numbers. This is half past 6, or 6:30.")]),
+    LS("time.4", "math", "Quarter past and quarter to", { g: "clock", lv: 4 }, () => [
+      T.show(clockSvg(4, 15), "When the long hand points to 3, it's quarter past. Quarter past 4 is 4:15."),
+      T.show(clockSvg(4, 45), "When the long hand points to 9, it's quarter to the next hour. 4:45 is quarter to 5.")]),
+    LS("time.5", "math", "Five-minute times", { g: "clock", lv: 5 }, () => [
+      T.show(clockSvg(2, 20), "For the long hand, each number means 5 minutes. Count by 5s: 5, 10, 15, 20. It's 2:20!"),
+      T.show(clockSvg(7, 35), "The long hand points to 7. Count by 5s to 35. It's 7:35.")]),
+    LS("time.6", "math", "a.m. and p.m.", { g: "time", lv: 1, only: ["ampm"] }, () => [
+      T.show(`<div class="flagbig">🌅🍳</div>`, "a.m. means the morning, from midnight until noon. You eat breakfast in the a.m."),
+      T.show(`<div class="flagbig">🌙🛏️</div>`, "p.m. means after noon: the afternoon and the night. You go to bed in the p.m.")]),
+    LS("time.7", "math", "Days of the week", { g: "time", lv: 1, only: ["days"] }, () => [
+      T.show(`<div class="week">${DAYS.map((d) => `<span>${d}</span>`).join("")}</div>`, `There are 7 days in a week: ${DAYS.join(", ")}.`),
+      T.show(`<div class="week">${["Saturday", "Sunday"].map((d) => `<span>${d}</span>`).join("")}</div>`, "Saturday and Sunday are the weekend!")]),
+    LS("time.8", "math", "Months of the year", { g: "time", lv: 1, only: ["months"] }, () => [
+      T.show(`<div class="week">${MONTHS.map((m) => `<span>${m}</span>`).join("")}</div>`, `There are 12 months in a year: ${MONTHS.join(", ")}.`),
+      T.show(`<div class="flagbig">🎂</div>`, "Your birthday is in one of these months!")]),
+    LS("time.9", "math", "The four seasons", { g: "time", lv: 1, only: ["seasons"] }, () => [T.show(`<div class="flagbig">⛄🌷🏖️🍂</div>`, "A year has 4 seasons: winter, spring, summer, and fall."),
+      ...SEASONS.map(([name, em, clue]) => T.show(`<div class="flagbig">${em}</div>`, `${cap(name)}: ${clue}`))]),
+    LS("time.10", "math", "How much later?", { g: "time", lv: 1, only: ["later"] }, () => [
+      T.show(clockSvg(2, 0), "It's 2 o'clock. What time is it 3 hours later? Count the hours: 3, 4, 5. It's 5 o'clock!")]),
+  ] },
+  { id: "states", game: "states", ico: "🗺️", name: "50 States", lessons: [
+    LS("states.1", "world", "The 50 states", { g: "states", lv: 1, only: ["which"] }, () => [
+      T.show(usMap(), "The United States has 50 states."), T.show(`<div class="flagbig">🏛️</div>`, "The capital of our country is Washington, D.C. It isn't in any state!"),
+      T.show(usMap({ hls: GEO.us.states.map((x, i) => (["AK", "HI"].includes(x.abbr) ? i : -1)).filter((i) => i >= 0) }), "Alaska and Hawaii are far away from the other 48 states.")], "states"),
+    LS("states.2", "world", "The 4 regions", { g: "states", lv: 5, only: ["region"] }, () => [
+      T.show(usMap(), "The 50 states are grouped into 4 big parts called regions: the West, the Midwest, the South, and the Northeast."),
+      ...Object.keys(REGIONS).map((r) => T.show(regionMap(r), `This is the ${r}.`))], "states"),
+    regionLesson(3, "West", [["CA", "California has more people than any other state."], ["AK", "Alaska is the biggest state."], ["HI", "Hawaii is made of islands in the Pacific Ocean."]]),
+    regionLesson(4, "Midwest", [["IA", "The Midwest is called America's heartland. Lots of corn grows here."], ["MI", "Michigan is shaped like a mitten!"], ["IL", "The big city of Chicago is in Illinois."]]),
+    regionLesson(5, "South", [["TX", "Texas is the biggest state in the South."], ["FL", "Florida has warm beaches and alligators."], ["LA", "New Orleans is in Louisiana."]]),
+    regionLesson(6, "Northeast", [["NY", "New York City is the biggest city in the United States."], ["MA", "Boston, in Massachusetts, is one of the oldest cities in America."], ["ME", "Maine is the state farthest to the northeast."]]),
+    LS("states.7", "world", "State capitals", { g: "states", lv: 3, only: ["capital"] }, () => [["TX", "Austin is the capital of Texas."], ["FL", "Tallahassee is the capital of Florida."],
+      ["CA", "Sacramento is the capital of California."], ["NY", "Albany is the capital of New York. It's not New York City!"]].map(([ab, t]) => T.show(hlState(ab), t)), "states"),
+    LS("states.8", "world", "State nicknames", { g: "states", lv: 5, only: ["nick"] }, () => [["FL", "Florida is the Sunshine State."], ["TX", "Texas is the Lone Star State."],
+      ["CA", "California is the Golden State."], ["NY", "New York is the Empire State."]].map(([ab, t]) => T.show(hlState(ab), t)), "states"),
+    LS("states.9", "world", "Short names (TX, CA)", { g: "states", lv: 5, only: ["abbr"] }, () => [
+      T.show(`<div class="bigtext">TX</div>`, "Every state has a short name with two letters. T X is Texas."), T.show(`<div class="bigtext">CA</div>`, "C A is California."), T.show(`<div class="bigtext">FL</div>`, "F L is Florida.")], "states"),
+    LS("states.10", "world", "State shapes", { g: "states", lv: 4, only: ["shape"] }, () => [["TX", "This is Texas. It's big, with a pointy bottom."], ["FL", "This is Florida. It sticks down into the ocean."],
+      ["CO", "This is Colorado. It's a rectangle!"]].map(([ab, t]) => T.show(shapeOf(GEO.us.states.find((x) => x.abbr === ab)), t)), "states"),
+  ] },
+  { id: "flags", game: "flags", ico: "🚩", name: "Flags", lessons: [
+    LS("flags.1", "world", "What is a flag?", { g: "flags", lv: 1, only: ["find"] }, () => [
+      T.show(`<div class="flagbig">🇺🇸</div>`, "A flag is a country's special picture. The American flag has 50 stars, one for each state."),
+      T.show(`<div class="flagbig">🇺🇸</div>`, "It has 13 red and white stripes, for the first 13 states."), T.show(`<div class="flagbig">🇨🇦</div>`, "Canada's flag has a red maple leaf.")], "flags"),
+    flagLesson(2, "North America"), flagLesson(3, "South America"), flagLesson(4, "Europe"), flagLesson(5, "Asia"), flagLesson(6, "Africa"),
+    LS("flags.7", "world", "Flags that look alike", { g: "flags", lv: 4, only: ["name"] }, () => [
+      T.show(flagRow(["IE", "IT"]), "Ireland and Italy look alike! Ireland is green, white, and orange. Italy is green, white, and red."),
+      T.show(flagRow(["PL", "ID"]), "Poland is white on top and red below. Indonesia is red on top and white below."),
+      T.show(flagRow(["NL", "RU"]), "The Netherlands is red, white, and blue from the top. Russia is white, blue, and red.")], "flags"),
+    LS("flags.8", "world", "Flags and capitals", { g: "flags", lv: 5, only: ["capital"] }, () => [["FR", "Paris is the capital of France."], ["JP", "Tokyo is the capital of Japan."],
+      ["KE", "Nairobi is the capital of Kenya."]].map(([iso, t]) => T.show(`<div class="flagbig">${flag(iso)}</div>`, t)), "flags"),
+  ] },
+  { id: "countries", game: "countries", ico: "🌍", name: "Countries", lessons: [
+    LS("countries.1", "world", "Countries and continents", { g: "countries", lv: 3, only: ["continent"] }, () => [
+      T.show(contMap({ all: true }), "Each continent has many countries."), T.show(hlCountry("FR"), "France is a country in Europe."), T.show(hlCountry("KE"), "Kenya is a country in Africa.")], "countries"),
+    countryLesson(2, "North America", [["US", "The United States is our country."], ["CA", "Canada is north of the United States. It's the second biggest country in the world!"], ["MX", "Mexico is south of the United States."]]),
+    countryLesson(3, "South America", [["BR", "Brazil is the biggest country in South America. The Amazon rainforest is there."], ["AR", "Argentina is near the bottom of South America."], ["PE", "Peru has the tall Andes mountains."]]),
+    countryLesson(4, "Europe", [["FR", "France is in Europe. Its capital is Paris."], ["IT", "Italy is shaped like a boot!"], ["GB", "The United Kingdom is on islands."]]),
+    countryLesson(5, "Asia", [["CN", "China has more than a billion people."], ["IN", "India has more than a billion people, too."], ["JP", "Japan is made of islands."]]),
+    countryLesson(6, "Africa", [["EG", "Egypt has the pyramids and the Nile River."], ["KE", "Kenya has lions, zebras, and giraffes."], ["ZA", "South Africa is at the very bottom of Africa."]]),
+    LS("countries.7", "world", "The biggest countries", { g: "countries", lv: 1, only: ["which"] }, () => [["RU", "Russia is the biggest country in the world."], ["CA", "Canada is the second biggest."],
+      ["CN", "The United States and China are about the same size. They come next!"], ["BR", "Brazil and Australia are big, too."]].map(([iso, t]) => T.show(hlCountry(iso, false), t)), "countries"),
+    LS("countries.8", "world", "Capital cities", { g: "countries", lv: 4, only: ["capital"] }, () => [["FR", "Paris is the capital of France."], ["JP", "Tokyo is the capital of Japan."],
+      ["EG", "Cairo is the capital of Egypt."], ["MX", "Mexico City is the capital of Mexico."]].map(([iso, t]) => T.show(`<div class="flagbig">${flag(iso)}</div>`, t)), "countries"),
+    LS("countries.9", "world", "Famous places", { g: "countries", lv: 3, only: ["landmark"] }, () => LANDMARKS.slice(0, 7).map(([em, place, iso]) =>
+      T.show(`<div class="flagbig">${em} ${flag(iso)}</div>`, `${cap(place)} is in ${the(GEO.world.countries.find((c) => c.iso === iso).name)}.`)), "countries"),
+    LS("countries.10", "world", "Find it on the map", { g: "countries", lv: 4, only: ["find"] }, () => [
+      T.show(hlCountry("AU", false), "Look at the shape and where it is. This is Australia, down under!"), T.show(hlCountry("IN", false), "India points down into the ocean, like a triangle.")], "countries"),
+  ] },
+  { id: "world", game: "continents", ico: "🌎", name: "Continents and oceans", lessons: ["2d", "3d"] },
+  { id: "sounds", game: "sounds", ico: "🔤", name: "Letter sounds and reading", lessons: ["1c", "2c", "3c", "4c", "5c", "6c", "7c"] },
+  { id: "count", game: "count", ico: "🍎", name: "Counting", lessons: ["1a", "2a", "3b", "5a", "6a", "8a"] },
+  { id: "add", game: "add", ico: "➕", name: "Adding and taking away", lessons: ["3a", "4a", "5b", "7a"] },
+  { id: "shapes", game: "shapes", ico: "🔷", name: "Shapes and patterns", lessons: ["1b", "2b", "8c"] },
+];
+// Adventure lessons that are also covered by library lessons: passing those (4 of 5) counts as doing the Adventure lesson.
+const LIB = { "1d": ["states.1"], "4b": ["coins.1", "coins.2"], "4d": ["flags.1"], "5d": ["states.3", "states.4", "states.5", "states.6"], "6b": ["time.2"],
+  "6d": ["countries.2"], "7b": ["time.3"], "7d": ["countries.1"], "8b": ["coins.6", "coins.8"], "8d": ["states.7"] };
+const passed = (id, data = S.data) => ((data.lessons || {})[id] || {}).n >= PASS_N;
+const lsDone = (x, data = S.data) => !!(data.lessons || {})[x.id] || (!!LIB[x.id] && LIB[x.id].every((id) => passed(id, data)));
+const topicLessons = (t) => t.lessons.map((x) => (typeof x === "string" ? lessonById(x)[1] : x));
+
+// ---------- placement quiz ----------
+// 3 questions per level (math, reading, world), starting at Level 3. 2 of 3 right = that level is passed: go up; otherwise stop (or go down
+// until a level is passed). Passed levels count as done in the Adventure. It only ever moves him up.
+async function startPlacement() {
+  S.round = { mode: "place", place: { L: 3, best: 0, down: false, blocks: 0 }, games: [], i: 0, results: [], seen: new Set(), before: tally().earned };
+  S.view = "play";
+  await placeBlock();
+}
+async function placeBlock() {
+  const r = S.round, L = LEVELS[r.place.L - 1];
+  try { await Promise.all(L.lessons.map(needData)); } catch { toast("That didn’t load. Check the internet."); S.view = "home"; render(); return; }
+  const picks = ["math", "read", "world"].map((s) => pick(L.lessons.filter((x) => x.s === s))).filter(Boolean);
+  while (picks.length < 3) picks.push(pick(L.lessons.filter((x) => !picks.includes(x))));
+  r.games.push(...picks.map((x) => x.p));
+  r.i = r.games.length - picks.length;
+  await nextQuestion();
+}
+function placeStep() {
+  const r = S.round, p = r.place, ok = r.results.slice(-3).filter(Boolean).length >= 2, top = LEVELS.filter((L) => L.lessons).length;
+  p.blocks++;
+  if (ok) { p.best = Math.max(p.best, p.L); if (!p.down && p.L < top && p.blocks < 7) { p.L++; return placeBlock(); } return finishPlacement(); }
+  if (p.best || p.L === 1 || p.blocks >= 7) return finishPlacement();
+  p.down = true; p.L--;
+  return placeBlock();
+}
+function finishPlacement() {
+  const r = S.round, best = r.place.best, old = ((S.data.lessons || {}).place || {}).lv || 0;
+  put("lessons", "place", { lv: Math.max(best, old), got: best, d: dayOf(), t: Date.now() });
+  flush();
+  r.summary = { placed: Math.max(best, old), got: best, gained: tally().earned - r.before };
+  S.view = "placed";
+  render();
+  tone([523, 659, 784, 1047, 1319], 0.18, "triangle", 0.11, 0.14); confetti(100);
+  const start = currentLevel();
+  say(best ? `Wow! You passed level ${best}! You start at level ${start}, ${LEVELS[start - 1].name}!` : `Great job! Let's start at level 1, ${LEVELS[0].name}!`, 500, "praise");
+}
+function placedView() {
+  const s = S.round.summary, start = currentLevel(), L = LEVELS[start - 1];
+  return `<section class="done levelup"><div class="burst">${L.em}</div><h1>${s.got ? "You're a star!" : "Let's go!"}</h1>
+  <p>${s.got ? `You passed Level ${s.got}. You start at <b>Level ${start}: ${esc(L.name)}</b>!` : `You start at <b>Level 1: ${esc(L.name)}</b>!`}</p>
+  ${s.gained ? `<div class="how" style="text-align:center"><div>⭐ <b>+${s.gained} stars!</b></div></div>` : ""}
+  <div class="btns"><button class="btn" data-level="${start}">Go to Level ${start} ${L.em}</button><button class="btn soft" data-go="home">My adventure 🗺️</button></div></section>`;
+}
+function topicView() {
+  const t = TOPICS.find((x) => x.id === S.topic), list = topicLessons(t), ls = S.data.lessons || {}, done = list.filter((x) => ls[x.id]).length;
+  return `<section class="lvhead"><div class="lvem">${t.ico}</div><h1>${esc(t.name)}</h1><p>${done} of ${list.length} lessons done</p></section>
+  <div class="rows">${list.map((x, i) => { const st = lessonStars(ls[x.id]); return `<button class="row" data-lesson="${x.id}"><span class="ico lnum">${i + 1}</span><span class="txt"><b>${esc(x.t)}</b><small>${ls[x.id] ? (passed(x.id) ? "Passed ✓" : "Done. Try for more stars!") : "Learn, then practice"}</small></span><span class="lv"><i>${st ? "★".repeat(st) + "☆".repeat(3 - st) : "☆☆☆"}</i>${st ? "Again ▶" : "Start ▶"}</span></button>`; }).join("")}</div>
+  <button class="row boss" data-go="${t.game}"><span class="ico">🎮</span><span class="txt"><b>Play the ${esc(t.name.toLowerCase())} game</b><small>Every right answer is a star!</small></span></button>`;
+}
 
 // ---------- rounds ----------
 async function startRound(mode) {
@@ -1288,7 +1611,7 @@ async function nextQuestion() {
   try { await ensureData(g); } catch { toast("The map didn’t load. Check the internet."); S.view = "home"; render(); return; }
   const lv = typeof spec === "string" ? levelOf(g) : spec.lv;
   let q;
-  for (let k = 0; k < 15; k++) { q = GEN[g](lv, spec.only); if (!r.seen.has(q.key)) break; }
+  for (let k = 0; k < 15; k++) { q = GEN[g](lv, spec.only, spec.opts || {}); if (!r.seen.has(q.key)) break; }
   r.seen.add(q.key);
   Object.assign(q, { g, lv });
   Object.assign(r, { q, tries: 0, solved: false });
@@ -1314,7 +1637,7 @@ function choose(key, el) {
     put("answers", uid(), { g: q.g, d: dayOf(), ok: first, lv: q.lv, t: Date.now(), ...(r.mode === "today" ? { dl: 1 } : {}), ...(r.lesson ? { ls: r.lesson } : {}) });
     const next = $("#nextBtn");
     next.hidden = false;
-    next.textContent = r.i + 1 < r.games.length ? "Next ▶" : "Finish 🎉";
+    next.textContent = r.mode === "place" || r.i + 1 < r.games.length ? "Next ▶" : "Finish 🎉";
     next.focus({ preventScroll: true });
     renderDots();
   } else {
@@ -1335,6 +1658,7 @@ function choose(key, el) {
 }
 function advance() {
   const r = S.round;
+  if (r.mode === "place" && r.i + 1 >= r.games.length) { placeStep(); return; }
   if (r.i + 1 < r.games.length) { r.i++; nextQuestion(); return; }
   finishRound();
 }
@@ -1360,7 +1684,7 @@ async function openLesson(id) {
   const [L, ls] = lessonById(id);
   if (!ls) return;
   try { await needData(ls); } catch { toast("That didn’t load. Check the internet."); return; }
-  S.level = L.n;
+  if (L) S.level = L.n;
   S.lesson = { id, i: 0, tapped: new Set(), slides: ls.slides() };
   S.view = "lesson";
   render();
@@ -1373,8 +1697,8 @@ function speakSlide() {
 async function startLessonRound(id) {
   const [L, ls] = lessonById(id);
   try { await needData(ls); } catch { toast("That didn’t load. Check the internet."); return; }
-  S.level = L.n;
-  S.round = { mode: "lesson", lesson: id, lv: L.n, games: Array(LESSON_Q).fill(ls.p), i: 0, results: [], seen: new Set(), before: tally().earned };
+  if (L) S.level = L.n;
+  S.round = { mode: "lesson", lesson: id, lv: L ? L.n : null, games: Array(LESSON_Q).fill(ls.p), i: 0, results: [], seen: new Set(), before: tally().earned };
   S.view = "play";
   await nextQuestion();
 }
@@ -1389,20 +1713,22 @@ async function startBoss(n) {
   await nextQuestion();
 }
 function finishLesson() {
-  const r = S.round, right = r.results.filter(Boolean).length, wasDone = levelDone(r.lv), hadTrophy = gradeDone(gradeOf(r.lv));
+  // Any lesson (Adventure or library) can finish a level, so compare every level and grade before and after.
+  const r = S.round, right = r.results.filter(Boolean).length, wasLv = LEVELS.map((L) => levelDone(L.n)), wasGr = GRADES.map((_, i) => gradeDone(i));
   const old = (S.data.lessons || {})[r.lesson];
-  const doc = { lv: r.lv, n: Math.max(right, old ? old.n || 0 : 0), of: r.games.length, d: dayOf(), t: Date.now() };
+  const doc = { ...(r.lv ? { lv: r.lv } : {}), n: Math.max(right, old ? old.n || 0 : 0), of: r.games.length, d: dayOf(), t: Date.now() };
   if (r.boss) doc.pass = right >= BOSS_PASS || !!(old && old.pass);
   put("lessons", r.lesson, doc);
   flush();
   const after = tally();
-  r.summary = { right, gained: after.earned - r.before, levelUp: !wasDone && levelDone(r.lv), trophy: !hadTrophy && gradeDone(gradeOf(r.lv)), first: !old, pass: r.boss ? right >= BOSS_PASS : null };
+  const up = LEVELS.find((L, i) => !wasLv[i] && levelDone(L.n)), gi = up ? gradeOf(up.n) : -1;
+  r.summary = { right, gained: after.earned - r.before, levelUp: !!up, upLevel: up ? up.n : null, trophy: gi >= 0 && !wasGr[gi] && gradeDone(gi), first: !old, pass: r.boss ? right >= BOSS_PASS : null };
   S.view = r.summary.levelUp ? "levelup" : "lessondone";
   render();
   if (r.summary.levelUp) {
     tone([523, 659, 784, 1047, 1319, 1568], 0.18, "triangle", 0.11, 0.14); confetti(140);
-    const L = LEVELS[r.lv - 1], g = GRADES[gradeOf(r.lv)];
-    say(`Level up! You finished level ${r.lv}, ${L.name}!${r.summary.trophy ? ` You won the ${g.tname}!` : ""} You earned ${plural(r.summary.gained, "star", "stars")}!`, 500, "praise");
+    const L = LEVELS[r.summary.upLevel - 1], g = GRADES[gradeOf(L.n)];
+    say(`Level up! You finished level ${L.n}, ${L.name}!${r.summary.trophy ? ` You won the ${g.tname}!` : ""} You earned ${plural(r.summary.gained, "star", "stars")}!`, 500, "praise");
   } else {
     sfx.win(); confetti(60);
     say(r.boss ? (r.summary.pass ? "You passed the challenge!" : `You got ${right} right. You need ${BOSS_PASS} to pass. Try the lessons, then try again!`)
@@ -1421,7 +1747,7 @@ function mapView(t) {
     for (const L of LEVELS.filter((x) => x.n <= g.last && x.n > (GRADES[gi - 1]?.last || 0))) {
       const x = XS[k++ % 4], done = levelDone(L.n), open = L.lessons && unlocked(L.n);
       const cls = done ? "done" : !L.lessons ? "soon" : open ? (L.n === cur ? "cur" : "open") : "lock";
-      const got = L.lessons ? L.lessons.filter((ls) => (S.data.lessons || {})[ls.id]).length : 0;
+      const got = L.lessons ? L.lessons.filter((ls) => lsDone(ls)).length : 0;
       items.push(`<button class="node ${cls}" style="left:${x}%;top:${y}px" data-level="${L.n}" aria-label="Level ${L.n}: ${esc(L.name)}">
         <span class="nem">${!L.lessons || open || done ? L.em : "🔒"}</span><b>${L.n}</b>${L.n === cur && !done ? `<span class="me">🦖</span>` : ""}
         ${L.lessons && open && !done ? `<i class="prog">${got}/${L.lessons.length}</i>` : ""}</button>
@@ -1447,6 +1773,7 @@ function mapView(t) {
     <button data-go="games"><span>🎮</span>Games</button><button data-go="stories"><span>📚</span>Stories</button>
     <button data-go="trophies"><span>🏆</span>Trophies</button><button data-go="rewards"><span>🎁</span>Prizes</button>
   </div>
+  ${(S.data.lessons || {}).place ? "" : `<button class="row boss" data-act="place"><span class="ico">🧭</span><span class="txt"><b>Find my level!</b><small>A quick quiz to start in just the right place.</small></span></button>`}
   <h2>🗺️ My adventure</h2>
   <div class="adv" style="height:${y}px">
     <svg class="trail" viewBox="0 0 100 ${y}" preserveAspectRatio="none" aria-hidden="true"><path class="road" d="${d}"/><path class="dash" d="${d}"/></svg>
@@ -1455,14 +1782,16 @@ function mapView(t) {
   <div class="rows"><button class="row" data-go="grownups"><span class="ico">🔒</span><span class="txt"><b>Grown-ups</b><small>For ${PARENT_NAME}</small></span></button></div>`;
 }
 function gamesView() {
-  return `<h2 style="margin-top:6px">🎮 Games</h2><p class="storytitle" style="text-align:left;margin-bottom:14px">Play anything you like. Every right answer is a star!</p>
-  <div class="rows">${GAMES.map((g) => { const lv = levelOf(g.id); return `<button class="row" data-go="${g.id}"><span class="ico">${g.ico}</span><span class="txt"><b>${g.name}</b><small>${g.sub}</small></span><span class="lv"><i>${"★".repeat(lv)}${"☆".repeat(5 - lv)}</i>Level ${lv}</span></button>`; }).join("")}</div>`;
+  const ls = S.data.lessons || {};
+  return `<h2 style="margin-top:6px">🎮 Learn and play</h2><p class="storytitle" style="text-align:left;margin-bottom:14px">Pick a topic. 📘 Learn has lessons. 🎮 Play is the game. Every right answer is a star!</p>
+  <div class="rows">${TOPICS.map((t) => { const list = topicLessons(t), done = list.filter((x) => ls[x.id]).length; return `<div class="row topic"><span class="ico">${t.ico}</span><span class="txt"><b>${esc(t.name)}</b><small>${done} of ${list.length} lessons</small></span>
+    <span class="tbtns"><button class="mini" data-topic="${t.id}">📘 Learn</button><button class="mini soft" data-go="${t.game}">🎮 Play</button></span></div>`; }).join("")}</div>`;
 }
 function levelView() {
   const L = LEVELS[S.level - 1], g = GRADES[gradeOf(L.n)], ls = S.data.lessons || {}, done = levelDone(L.n), boss = ls["c" + L.n];
-  const got = L.lessons.filter((x) => ls[x.id]).length;
+  const got = L.lessons.filter((x) => lsDone(x)).length;
   return `<section class="lvhead"><div class="lvem">${L.em}</div><h1>Level ${L.n}: ${esc(L.name)}</h1><p>${g.name} · ${done ? "Finished! 🎉" : `${got} of ${L.lessons.length} lessons done`}</p></section>
-  <div class="rows">${L.lessons.map((x) => { const st = lessonStars(ls[x.id]); return `<button class="row" data-lesson="${x.id}"><span class="ico">${SUBJ[x.s]}</span><span class="txt"><b>${esc(x.t)}</b><small>${{ math: "Math", read: "Reading", world: "World" }[x.s]}</small></span><span class="lv"><i>${st ? "★".repeat(st) + "☆".repeat(3 - st) : "☆☆☆"}</i>${st ? "Done ✓" : "Start ▶"}</span></button>`; }).join("")}</div>
+  <div class="rows">${L.lessons.map((x) => { const st = lessonStars(ls[x.id]) || (lsDone(x) ? 3 : 0); return `<button class="row" data-lesson="${x.id}"><span class="ico">${SUBJ[x.s]}</span><span class="txt"><b>${esc(x.t)}</b><small>${{ math: "Math", read: "Reading", world: "World" }[x.s]}</small></span><span class="lv"><i>${st ? "★".repeat(st) + "☆".repeat(3 - st) : "☆☆☆"}</i>${st ? "Done ✓" : "Start ▶"}</span></button>`; }).join("")}</div>
   <button class="row boss" data-boss="${L.n}"><span class="ico">⚡</span><span class="txt"><b>Level challenge</b><small>${boss && boss.pass ? "Passed! 🎉" : `Get ${BOSS_PASS} of ${BOSS_Q} right to finish the level fast!`}</small></span></button>`;
 }
 function lessonView() {
@@ -1476,24 +1805,26 @@ function lessonView() {
   ${last && ready ? `<button class="next" data-act="slnext" style="margin-top:14px">Let's practice! ✏️</button>` : ""}`;
 }
 function lessonDoneView() {
-  const r = S.round, s = r.summary, L = LEVELS[r.lv - 1];
-  const nextLs = r.boss ? null : L.lessons[L.lessons.findIndex((x) => x.id === r.lesson) + 1];
+  const r = S.round, s = r.summary, L = r.lv ? LEVELS[r.lv - 1] : null, topic = S.ctx && S.ctx.type === "topic" ? TOPICS.find((t) => t.id === S.ctx.id) : null;
+  const list = topic ? topicLessons(topic) : L ? L.lessons : [], nextLs = r.boss ? null : list[list.findIndex((x) => x.id === r.lesson) + 1];
+  const back = topic ? `<button class="btn" data-topic="${topic.id}">${topic.ico} ${esc(topic.name)}</button>` : L ? `<button class="btn" data-level="${L.n}">Level ${L.n} ▶</button>` : `<button class="btn" data-go="games">Topics ▶</button>`;
   const st = r.boss ? 0 : lessonStars({ n: s.right });
   return `<section class="done"><span class="star">${r.boss ? (s.pass ? "⚡" : "💪") : st === 3 ? "🌟" : "⭐"}</span>
   <h1>${r.boss ? (s.pass ? "Challenge passed!" : "Good try!") : "Lesson done!"}</h1>
   <p>${s.right} of ${r.games.length} right on the first try.</p>
   ${r.boss ? "" : `<div class="lstars">${"★".repeat(st)}${"☆".repeat(3 - st)}</div>`}
   ${s.gained ? `<div class="how" style="text-align:center"><div>⭐ <b>+${s.gained} stars!</b></div></div>` : ""}
-  <div class="btns">${nextLs ? `<button class="btn" data-lesson="${nextLs.id}">Next lesson ▶</button>` : `<button class="btn" data-level="${L.n}">Level ${L.n} ▶</button>`}
+  ${!r.boss && !L && s.right >= PASS_N ? `<p>✅ Passed! It counts on your adventure map too.</p>` : ""}
+  <div class="btns">${nextLs ? `<button class="btn" data-lesson="${nextLs.id}">Next lesson ▶</button>` : back}
   <button class="btn soft" data-${r.boss ? "boss" : "lpractice"}="${r.boss ? L.n : r.lesson}">Try again 🔁</button>
   <button class="btn soft" data-go="home">My adventure 🗺️</button></div></section>`;
 }
 function levelUpView() {
-  const r = S.round, s = r.summary, L = LEVELS[r.lv - 1], g = GRADES[gradeOf(r.lv)], next = LEVELS[r.lv];
+  const r = S.round, s = r.summary, L = LEVELS[s.upLevel - 1], g = GRADES[gradeOf(L.n)], next = LEVELS[currentLevel() - 1];
   return `<section class="done levelup"><div class="burst">${L.em}</div><h1>LEVEL UP!</h1><p>You finished Level ${L.n}: <b>${esc(L.name)}</b>!</p>
   ${s.trophy ? `<div class="won">${g.trophy}</div><p>You won the <b>${esc(g.tname)}</b>!</p>` : ""}
   <div class="how" style="text-align:center"><div>⭐ <b>+${s.gained} stars!</b></div></div>
-  <div class="btns">${next && next.lessons ? `<button class="btn" data-level="${next.n}">Go to Level ${next.n} ${next.em}</button>` : `<button class="btn" data-go="home">My adventure 🗺️</button>`}
+  <div class="btns">${next && next.lessons && !levelDone(next.n) ? `<button class="btn" data-level="${next.n}">Go to Level ${next.n} ${next.em}</button>` : `<button class="btn" data-go="home">My adventure 🗺️</button>`}
   <button class="btn soft" data-go="trophies">Trophy Room 🏆</button></div></section>`;
 }
 function trophiesView(t) {
@@ -1530,6 +1861,8 @@ function render() {
   else if (S.view === "lesson") app.innerHTML = lessonView();
   else if (S.view === "lessondone") app.innerHTML = lessonDoneView();
   else if (S.view === "levelup") app.innerHTML = levelUpView();
+  else if (S.view === "topic") app.innerHTML = topicView();
+  else if (S.view === "placed") app.innerHTML = placedView();
   else app.innerHTML = mapView(t);
   if (S.view === "play") renderDots();
   window.scrollTo(0, 0);
@@ -1632,7 +1965,9 @@ function grownupsView(t) {
   return `<div class="panel"><h2>Prize requests</h2>
     ${open.length ? `<div class="list">${open.map(([id, x]) => { const it = SHOP.find((s) => s.id === x.item) || { em: "🎁", name: x.item }; return `<div class="li"><span class="grow">${it.em} <b>${esc(it.name)}</b> · ${x.stars} ⭐ · ${new Date(x.t).toLocaleDateString()}</span><button class="mini" data-give="${esc(id)}">Given ✓</button><button class="mini soft" data-cancel="${esc(id)}">Cancel</button></div>`; }).join("")}</div>` : `<p>No requests right now.</p>`}
   </div>
-  <div class="panel"><h2>${KID}'s adventure</h2><p>Level ${currentLevel()} · ${t.adv.lessons} lessons and ${t.adv.levels} levels done. Levels 1 to ${LEVELS.filter((L) => L.lessons).length} are ready; the rest are coming.</p></div>
+  <div class="panel"><h2>${KID}'s adventure</h2><p>Level ${currentLevel()} · ${t.adv.lessons} lessons and ${t.adv.levels} levels done. Levels 1 to ${LEVELS.filter((L) => L.lessons).length} are ready; the rest are coming.
+    ${(S.data.lessons || {}).place ? `Placement quiz: passed through Level ${S.data.lessons.place.lv}.` : "He hasn't taken the placement quiz yet."} Lessons he passes in the library (4 of 5) also count on the map.</p>
+    <button class="mini soft" data-act="place">🧭 ${(S.data.lessons || {}).place ? "Retake" : "Start"} the placement quiz</button></div>
   <div class="panel"><h2>${KID}'s games</h2><p>Level moves up at 80% right on the first try and down at 40%. Stars: ${t.earned} earned, ${t.spent} spent. Streak ${t.streak} days.</p>
     <table><tr><th>Game</th><th class="n">Level</th><th class="n">This week</th><th class="n">All</th><th class="n">Last 20</th></tr>${rows}</table></div>
   <div class="panel"><h2>Give special stars</h2><p>For being kind, trying hard, or anything you like. He sees your reason.</p>
@@ -1676,8 +2011,13 @@ document.addEventListener("click", async (e) => {
     S.level = L.n; S.view = "level"; S.round = null; render(); say(`Level ${L.n}. ${L.name}!`);
     return;
   }
+  const tp = e.target.closest("[data-topic]");
+  if (tp) { const t = TOPICS.find((x) => x.id === tp.dataset.topic); if (!t) return; S.topic = t.id; S.view = "topic"; S.round = null; render(); say(`${t.name}! Pick a lesson.`); return; }
   const lsb = e.target.closest("[data-lesson],[data-lpractice],[data-boss]");
   if (lsb) {
+    // Where the lesson was opened from decides where "back" and "next lesson" go.
+    if (S.view === "level") S.ctx = { type: "level", n: S.level };
+    if (S.view === "topic") S.ctx = { type: "topic", id: S.topic };
     if (lsb.dataset.lesson) openLesson(lsb.dataset.lesson);
     else if (lsb.dataset.lpractice) startLessonRound(lsb.dataset.lpractice);
     else startBoss(+lsb.dataset.boss);
@@ -1717,11 +2057,12 @@ document.addEventListener("click", async (e) => {
     if (a === "repeat") { if (S.round.q.clips) speak(S.round.q.clips); else say(S.round.q.say); }
     if (a === "readpage") { const st = R().stories.find((x) => x.id === S.story.id), i = S.story.page; speak([lineItem(`t-${st.id}-${i}`, st.pages[i][0])]); }
     if (a === "soundout") speak(S.round.q.sounds.map((g) => sndItem(g.k, 0.45)));
-    if (a === "quitlesson") { S.view = "level"; S.lesson = null; render(); }
+    if (a === "quitlesson") { S.view = S.ctx && S.ctx.type === "topic" ? "topic" : "level"; S.lesson = null; render(); }
+    if (a === "place") startPlacement();
     if (a === "hearslide") speakSlide();
     if (a === "slprev" && S.lesson.i > 0) { S.lesson.i--; S.lesson.tapped = new Set(); render(); speakSlide(); }
     if (a === "slnext") { if (S.lesson.i + 1 < S.lesson.slides.length) { S.lesson.i++; S.lesson.tapped = new Set(); render(); speakSlide(); } else startLessonRound(S.lesson.id); }
-    if (a === "quit" && S.round.lesson) { S.view = "level"; S.round = null; render(); return; }
+    if (a === "quit" && S.round.lesson) { S.view = S.ctx && S.ctx.type === "topic" && !S.round.boss ? "topic" : "level"; S.round = null; render(); return; }
     if (a === "quit") { if (S.round.mode === "today" && S.round.results.length) modal(`<span class="em">🛑</span><h2>Stop Today's 5?</h2>`, () => { S.view = "home"; S.round = null; render(); }); else { S.view = "home"; S.round = null; render(); } }
     if (a === "logout") modal(`<span class="em">👋</span><h2>Log out?</h2>`, async () => { await fetch("/api/logout", { method: "POST" }).catch(() => {}); location.href = "/login"; });
     if (a === "cleartest") modal(`<span class="em">🧪</span><h2>Clear all test data?</h2>`, async () => { await fetch("/api/db", { method: "DELETE" }); location.reload(); });
@@ -1810,13 +2151,14 @@ paintTheme();
 // The home-screen app has no back swipe or pull-to-refresh of its own, so the app adds them.
 // Swipe from the left edge: back one screen (not during a game; the ✕ button does that). Swipe sideways on a story: turn the page.
 // Pull down at the top: refresh (not during a game). In Safari, its own back swipe goes back one screen.
-const BACK = { done: "home", rewards: "home", grownups: "home", voices: "grownups", stories: "home", story: "stories", games: "home", trophies: "home", level: "home", lesson: "level", lessondone: "level", levelup: "home" };
+const BACK = { done: "home", rewards: "home", grownups: "home", voices: "grownups", stories: "home", story: "stories", games: "home", trophies: "home", level: "home", lesson: "level", lessondone: "level", levelup: "home", topic: "games", placed: "home" };
 const EDGE = 28;
 const standalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
 const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 function goBack() {
-  const to = BACK[S.view];
+  let to = BACK[S.view];
   if (!to) return false;
+  if ((S.view === "lesson" || S.view === "lessondone") && S.ctx && S.ctx.type === "topic") to = "topic";
   if (S.view === "done" || S.view === "lessondone" || S.view === "levelup") S.round = null;
   S.view = to; render();
   return true;

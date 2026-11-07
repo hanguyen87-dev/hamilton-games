@@ -75,3 +75,9 @@ Same as SAT Daily Ten, no framework, no build step: `index.html` (the whole app)
 - Content lives in `LEVELS` in index.html; new question makers: shapes, pattern, continents, oceans, tens. Progress: `lessons` collection (one doc per lesson id like "3b", "c3" for a passed challenge).
 - Stars (generous): +1 per right answer, Today's 5 +10 (+10 if all right), lesson +3, level +10, grade prize +25 (crown +100), every 5-day streak +30. Prize prices were multiplied by 10 to match (SHOP in index.html = SHOP_COST in api/db.js).
 - `tools/build_geo.cjs` also builds the 7 continent shapes (all countries merged; Russia and Turkey left neutral) and ocean label points into data/world.json.
+
+## Lesson library and placement
+- Games → each topic has 📘 Learn (lessons, easy to hard) and 🎮 Play (the game). Topics: Coins (10), Clock and time (10), 50 States (10), Flags (8), Countries (10), plus Continents and oceans, Letter sounds, Counting, Adding, Shapes, which reuse the Adventure lessons. `TOPICS` in index.html.
+- Facts from public sources: U.S. Mint (coins and who is on them; last circulating penny struck Nov 12, 2025, pennies still legal tender), U.S. Census Bureau (the 4 regions), CIA World Factbook (countries, capitals). Topic order follows Common Core and the Core Knowledge Sequence.
+- A library lesson passed with 4 of 5 right on the first try counts for the Adventure: `LIB` maps each Adventure lesson to the library lessons that cover it.
+- Placement quiz ("Find my level!" on the map, and in Grown-ups): 3 questions per level (math, reading, world) from Level 3; 2 of 3 = passed, go up; the first miss stops it (or steps down until a level passes). Saved as lessons/place {lv}; levels up to lv count as done. It only moves him up.
