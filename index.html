@@ -268,6 +268,26 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
 .flagrow small { font-size: .95rem; font-weight: 800; color: var(--muted); }
 .week { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 460px; }
 .week span { background: var(--surface); border: 2px solid var(--line); border-radius: 12px; padding: 6px 10px; font-weight: 800; }
+/* grades 2-5 pictures */
+.b10 .flat { width: 62px; height: 62px; border-radius: 4px; background: #1D8FB0; background-image: linear-gradient(#0F6C86 1.5px, transparent 1.5px), linear-gradient(90deg, #0F6C86 1.5px, transparent 1.5px); background-size: 6.2px 6.2px; margin-right: 4px; }
+.pairs { display: grid; grid-template-columns: repeat(2, auto); gap: 4px 10px; justify-content: center; font-size: 1.8rem; max-height: 46vh; overflow: hidden; grid-auto-flow: row; }
+.arr { display: grid; grid-template-columns: repeat(var(--c), auto); gap: 4px 8px; justify-content: center; font-size: clamp(1.6rem, 7vw, 2.2rem); }
+.fr { display: inline-flex; flex-direction: column; align-items: center; line-height: 1; vertical-align: middle; font-weight: 800; }
+.fr sup, .fr sub { font-size: .8em; vertical-align: baseline; position: static; padding: 0 .15em; }
+.fr sup { border-bottom: 3px solid currentColor; }
+.frpic, .bars, .ruler, .grect, .angle, .coord { max-width: 100%; height: auto; }
+.bars .gl, .coord .gl { stroke: var(--line); stroke-width: 1.5; }
+.bars .ax, .coord .ax, .grect .ax { fill: var(--ink); font-size: 15px; font-weight: 700; }
+.grect .ax { font-size: 18px; }
+.bill { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .2)); }
+.layers { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.layers div { display: grid; justify-items: center; }
+.layers small { font-weight: 800; color: var(--muted); }
+.layers .grect { width: 130px; }
+.passage { background: var(--surface); border: 2px solid var(--line); border-radius: 16px; padding: 12px 16px; font-size: clamp(1.15rem, 4.8vw, 1.35rem); line-height: 1.45; max-width: 520px; text-align: left; }
+.mapgrid { position: relative; display: grid; grid-template-columns: repeat(3, 64px); gap: 6px; font-size: 2.4rem; padding-top: 30px; }
+.mapgrid span { display: grid; place-items: center; background: var(--surface); border: 2px solid var(--line); border-radius: 12px; height: 64px; }
+.mapgrid .nlab { position: absolute; top: 0; left: 50%; transform: translateX(-50%); height: auto; border: 0; background: none; font-size: 1rem; font-weight: 800; color: var(--brand); }
 /* trophy room */
 .shelf { background: var(--surface); border: 2px solid var(--line); border-radius: 20px; padding: 12px 14px; margin-bottom: 14px; box-shadow: var(--shadow); }
 .shelf h2 { margin: 0 0 8px; font-size: 1.15rem; }
@@ -1181,6 +1201,389 @@ Object.assign(GEN, {
   },
 });
 
+
+// ---------- 2nd to 5th grade: question makers ----------
+const fmt = (n) => Number(n).toLocaleString("en-US");
+const numChF = (list) => list.map((v) => ({ key: String(v), html: fmt(v), say: String(v), kind: "num" }));
+const money = (c) => `$${(c / 100).toFixed(2)}`;
+const moneySay = (c) => { const d = Math.floor(c / 100), r = c % 100; return [d ? plural(d, "dollar", "dollars") : "", r ? plural(r, "cent", "cents") : ""].filter(Boolean).join(" and ") || "0 cents"; };
+const DEN = { 2: ["half", "halves"], 3: ["third", "thirds"], 4: ["fourth", "fourths"], 5: ["fifth", "fifths"], 6: ["sixth", "sixths"], 8: ["eighth", "eighths"], 10: ["tenth", "tenths"], 12: ["twelfth", "twelfths"] };
+const fr = (n, d) => `<span class="fr"><sup>${n}</sup><sub>${d}</sub></span>`;
+const frSay = (n, d) => (DEN[d] ? `${n} ${n === 1 ? DEN[d][0] : DEN[d][1]}` : `${n} over ${d}`);
+const frCh = (list) => list.map(([n, d]) => ({ key: `${n}/${d}`, html: fr(n, d), say: frSay(n, d), kind: "num" }));
+// Wrong number answers near the right one, all different and positive.
+function nearNums(ans, steps, n = 4, lo = 0) {
+  const set = new Set([ans]);
+  for (const s of shuffle(steps.flatMap((x) => [x, -x]))) { if (set.size >= n) break; if (ans + s >= lo) set.add(ans + s); }
+  for (let k = 1; set.size < n; k++) set.add(ans + k * (steps[0] || 1));
+  return [...set].sort((a, b) => a - b);
+}
+function hundreds(n) {
+  const h = Math.floor(n / 100), t = Math.floor(n / 10) % 10, o = n % 10;
+  return `<div class="b10">${'<span class="flat"></span>'.repeat(h)}${'<span class="rod"></span>'.repeat(t)}<span class="ones">${'<span class="unit"></span>'.repeat(o)}</span></div>`;
+}
+function fracPic(n, d, kind = d <= 4 && Math.random() < 0.5 ? "pie" : "bar") {
+  const col = "#F77F00";
+  if (kind === "pie") {
+    let s = `<svg class="frpic" viewBox="0 0 120 120" width="150" height="150" role="img" aria-label="${n} of ${d} parts shaded">`;
+    for (let i = 0; i < d; i++) {
+      const a0 = (i / d) * 2 * Math.PI - Math.PI / 2, a1 = ((i + 1) / d) * 2 * Math.PI - Math.PI / 2;
+      const p = (a) => `${(60 + 54 * Math.cos(a)).toFixed(1)},${(60 + 54 * Math.sin(a)).toFixed(1)}`;
+      s += d === 1 ? `<circle cx="60" cy="60" r="54" fill="${i < n ? col : "var(--surface)"}"/>` : `<path d="M60,60 L${p(a0)} A54,54 0 ${a1 - a0 > Math.PI ? 1 : 0} 1 ${p(a1)} Z" fill="${i < n ? col : "var(--surface)"}" stroke="var(--ink)" stroke-width="2"/>`;
+    }
+    return s + "</svg>";
+  }
+  const w = 240 / d;
+  return `<svg class="frpic" viewBox="0 0 250 60" width="260" height="62" role="img" aria-label="${n} of ${d} parts shaded">${Array.from({ length: d }, (_, i) => `<rect x="${5 + i * w}" y="5" width="${w}" height="50" fill="${i < n ? col : "var(--surface)"}" stroke="var(--ink)" stroke-width="2"/>`).join("")}</svg>`;
+}
+const BAR_ITEMS = [["🍎", "apples"], ["🍌", "bananas"], ["🍇", "grapes"], ["🍓", "strawberries"], ["🐶", "dogs"], ["🐱", "cats"], ["🐟", "fish"], ["🐰", "bunnies"], ["⚽", "soccer"], ["🏀", "basketball"], ["⚾", "baseball"], ["🎾", "tennis"]];
+function barGraph(rows, step) {
+  const max = Math.max(...rows.map((r) => r[2])), top = Math.ceil(max / step) * step + step, H = 170, W = 70 * rows.length + 50, sc = H / top;
+  let s = `<svg class="bars" viewBox="0 0 ${W} ${H + 50}" width="${Math.min(360, W * 1.15)}" role="img" aria-label="Bar graph">`;
+  for (let v = 0; v <= top; v += step) { const y = 10 + H - v * sc; s += `<line x1="38" x2="${W - 4}" y1="${y}" y2="${y}" class="gl"/><text x="32" y="${y + 5}" class="ax" text-anchor="end">${v}</text>`; }
+  rows.forEach(([em, , v], i) => { const x = 50 + i * 70, h = v * sc; s += `<rect x="${x}" y="${10 + H - h}" width="44" height="${h}" rx="4" fill="${["#1D8FB0", "#F77F00", "#23864A", "#8E5CF0"][i]}"/><text x="${x + 22}" y="${H + 40}" text-anchor="middle" font-size="26">${em}</text>`; });
+  return s + "</svg>";
+}
+function rulerPic(len, em) {
+  const u = 44, W = 7 * u + 20;
+  let s = `<svg class="ruler" viewBox="0 0 ${W} 120" width="${Math.min(360, W)}" role="img" aria-label="ruler"><rect x="10" y="20" width="${len * u}" height="26" rx="13" fill="#F77F00"/><text x="${10 + (len * u) / 2}" y="40" text-anchor="middle" font-size="18">${em}</text>`;
+  s += `<rect x="6" y="60" width="${6 * u + 14}" height="50" rx="4" fill="#FFE8A3" stroke="#B88A00"/>`;
+  for (let i = 0; i <= 6; i++) s += `<line x1="${10 + i * u}" x2="${10 + i * u}" y1="60" y2="80" stroke="#5A4A30" stroke-width="2"/><text x="${10 + i * u}" y="102" text-anchor="middle" font-size="16" fill="#5A4A30">${i}</text>`;
+  return s + "</svg>";
+}
+function gridRect(w, h, grid = true) {
+  const c = 32, W = w * c + 70, H = h * c + 60;
+  let s = `<svg class="grect" viewBox="0 0 ${W} ${H}" width="${Math.min(340, W)}" role="img" aria-label="rectangle ${w} by ${h}"><rect x="35" y="15" width="${w * c}" height="${h * c}" fill="#BDE6F1" stroke="#1D8FB0" stroke-width="3"/>`;
+  if (grid) { for (let i = 1; i < w; i++) s += `<line x1="${35 + i * c}" x2="${35 + i * c}" y1="15" y2="${15 + h * c}" stroke="#1D8FB0"/>`; for (let j = 1; j < h; j++) s += `<line x1="35" x2="${35 + w * c}" y1="${15 + j * c}" y2="${15 + j * c}" stroke="#1D8FB0"/>`; }
+  else s += `<text x="${35 + (w * c) / 2}" y="${H - 18}" text-anchor="middle" class="ax">${w}</text><text x="18" y="${15 + (h * c) / 2 + 6}" text-anchor="middle" class="ax">${h}</text>`;
+  return s + "</svg>";
+}
+function anglePic(deg) {
+  const r = (deg * Math.PI) / 180, x = 40 + 130 * Math.cos(r), y = 150 - 130 * Math.sin(r);
+  return `<svg class="angle" viewBox="0 0 200 170" width="220" role="img" aria-label="angle"><line x1="40" y1="150" x2="190" y2="150" stroke="var(--ink)" stroke-width="5" stroke-linecap="round"/><line x1="40" y1="150" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="var(--ink)" stroke-width="5" stroke-linecap="round"/>
+    ${deg === 90 ? `<rect x="40" y="128" width="22" height="22" fill="none" stroke="#F77F00" stroke-width="3"/>` : `<path d="M${40 + 30},150 A30,30 0 0 0 ${(40 + 30 * Math.cos(r)).toFixed(1)},${(150 - 30 * Math.sin(r)).toFixed(1)}" fill="none" stroke="#F77F00" stroke-width="3"/>`}</svg>`;
+}
+function coordPic(x, y, label = "⭐") {
+  const c = 36, n = 6, o = 30;
+  let s = `<svg class="coord" viewBox="0 0 ${n * c + o + 20} ${n * c + o + 20}" width="280" role="img" aria-label="grid">`;
+  for (let i = 0; i <= n; i++) s += `<line x1="${o + i * c}" x2="${o + i * c}" y1="10" y2="${10 + n * c}" class="gl"/><line x1="${o}" x2="${o + n * c}" y1="${10 + i * c}" y2="${10 + i * c}" class="gl"/><text x="${o + i * c}" y="${n * c + 32}" text-anchor="middle" class="ax">${i}</text><text x="${o - 10}" y="${10 + (n - i) * c + 5}" text-anchor="end" class="ax">${i}</text>`;
+  s += `<line x1="${o}" x2="${o + n * c}" y1="${10 + n * c}" y2="${10 + n * c}" stroke="var(--ink)" stroke-width="3"/><line x1="${o}" x2="${o}" y1="10" y2="${10 + n * c}" stroke="var(--ink)" stroke-width="3"/>`;
+  return s + `<text x="${o + x * c}" y="${10 + (n - y) * c + 9}" text-anchor="middle" font-size="26">${label}</text></svg>`;
+}
+const billSvg = (v) => `<svg class="bill" viewBox="0 0 120 56" width="108" role="img" aria-label="${v} dollar bill"><rect x="2" y="2" width="116" height="52" rx="6" fill="#CFE8C9" stroke="#3B7A3B" stroke-width="3"/><circle cx="60" cy="28" r="15" fill="none" stroke="#3B7A3B" stroke-width="2"/><text x="60" y="35" text-anchor="middle" font-size="20" font-weight="800" fill="#2D5E2D">$${v}</text></svg>`;
+const moneyPic = (bills, coins) => `<div class="coins">${bills.map(billSvg).join("")}${coins.map((k) => coinSvg(k, true, 0.9)).join("")}</div>`;
+const layersPic = (l, w, h) => `<div class="layers">${Array.from({ length: h }, (_, i) => `<div><small>Layer ${i + 1}</small>${gridRect(l, w)}</div>`).join("")}</div>`;
+// Short reading passages written for this app. Each: text, then questions [question, right, wrong, wrong]; main = the main-idea answer.
+const PASSAGES = [
+  { title: "Max the Puppy", text: "Max is a little brown puppy. He likes to chase his red ball. When he is tired, he naps in a sunny spot by the window.",
+    qs: [["What color is Max's ball?", "red", "blue", "green"], ["Where does Max nap?", "by the window", "in the car", "under the bed"]], main: ["a puppy and what he likes to do", "how to bake a cake", "a big red truck"] },
+  { title: "The Garden", text: "Mia planted seeds in the spring. She watered them every day. Soon, tall yellow sunflowers grew in her garden.",
+    qs: [["When did Mia plant the seeds?", "in the spring", "in the winter", "at night"], ["What grew in the garden?", "sunflowers", "apples", "carrots"]], main: ["how Mia grew sunflowers", "a trip to the zoo", "a rainy day at school"] },
+  { title: "Snow Day", text: "It snowed all night. In the morning, Leo and his dad built a big snowman. They gave it a carrot nose and a warm hat.",
+    qs: [["What did they build?", "a snowman", "a sandcastle", "a fort"], ["What was the snowman's nose?", "a carrot", "a button", "a rock"]], main: ["building a snowman on a snow day", "going to the beach", "a dog who loves to swim"] },
+  { title: "Busy Bees", text: "Bees fly from flower to flower. They drink sweet nectar and carry pollen. Back at the hive, bees turn nectar into honey.",
+    qs: [["What do bees drink?", "nectar", "milk", "juice"], ["What do bees make from nectar?", "honey", "bread", "wax crayons"]], main: ["how bees make honey", "how to ride a bike", "why the sky is blue"] },
+  { title: "The Lost Shoe", text: "Sam could not find his left shoe. He looked under the bed and in the closet. At last, he found it in the dog's bed!",
+    qs: [["What was Sam looking for?", "his shoe", "his hat", "his book"], ["Where was it?", "in the dog's bed", "in the closet", "under the bed"]], main: ["Sam looking for his lost shoe", "a day at the park", "how dogs learn tricks"] },
+  { title: "Penguins", text: "Penguins are birds, but they cannot fly. They use their wings like flippers to swim fast. Many penguins live in very cold places.",
+    qs: [["Can penguins fly?", "no", "yes", "only at night"], ["How do penguins use their wings?", "to swim", "to dig", "to climb trees"]], main: ["penguins, birds that swim instead of fly", "how to build a nest", "hot deserts"] },
+  { title: "Lemonade Stand", text: "Ava and Ben made lemonade. They sold each cup for 25 cents. By lunch, they had sold 8 cups and earned 2 dollars.",
+    qs: [["How much was each cup?", "25 cents", "10 cents", "1 dollar"], ["How many cups did they sell?", "8", "5", "12"]], main: ["two kids selling lemonade", "a trip to the moon", "how lemons grow"] },
+  { title: "The Moon", text: "The Moon goes around the Earth. It does not make its own light. We see the Moon because sunlight bounces off it.",
+    qs: [["What does the Moon go around?", "the Earth", "the Sun only", "Mars"], ["Why can we see the Moon?", "sunlight bounces off it", "it makes its own light", "it is on fire"]], main: ["how the Moon moves and shines", "how to plant a tree", "what fish eat"] },
+];
+const VOWEL_WORDS = [["rain", "🌧️", "ai"], ["train", "🚆", "ai"], ["snail", "🐌", "ai"], ["tree", "🌳", "ee"], ["bee", "🐝", "ee"], ["sheep", "🐑", "ee"], ["feet", "🦶", "ee"],
+  ["boat", "⛵", "oa"], ["goat", "🐐", "oa"], ["coat", "🧥", "oa"], ["soap", "🧼", "oa"], ["seal", "🦭", "ea"], ["leaf", "🍃", "ea"], ["moon", "🌙", "oo"], ["book", "📖", "oo"]];
+const SENTENCES = [["The happy dog runs fast.", "dog", "runs", "happy"], ["A tall girl jumps high.", "girl", "jumps", "tall"], ["The little bird sings.", "bird", "sings", "little"],
+  ["My big brother kicks the ball.", "brother", "kicks", "big"], ["The red car stops.", "car", "stops", "red"], ["A sleepy cat naps on the bed.", "cat", "naps", "sleepy"],
+  ["The cold wind blows.", "wind", "blows", "cold"], ["The hungry bear eats fish.", "bear", "eats", "hungry"], ["Our old teacher reads a story.", "teacher", "reads", "old"]];
+const SYN = [["big", "large"], ["happy", "glad"], ["fast", "quick"], ["small", "little"], ["shout", "yell"], ["begin", "start"], ["smart", "clever"], ["scared", "afraid"], ["jump", "leap"], ["sick", "ill"]];
+const ANT = [["hot", "cold"], ["up", "down"], ["happy", "sad"], ["fast", "slow"], ["open", "closed"], ["day", "night"], ["full", "empty"], ["loud", "quiet"], ["early", "late"], ["tall", "short"]];
+const AFFIX = [["unhappy", "not happy", "happy again", "very happy"], ["unkind", "not kind", "kind again", "full of kindness"], ["redo", "do again", "not do", "do before"],
+  ["reread", "read again", "not read", "read badly"], ["helpful", "full of help", "without help", "help again"], ["careful", "full of care", "without care", "care again"],
+  ["careless", "without care", "full of care", "care again"], ["fearless", "without fear", "full of fear", "fear again"], ["preheat", "heat before", "heat again", "not heat"], ["unsafe", "not safe", "safe again", "very safe"]];
+// Fact banks: [question, right answer, wrong, wrong, emoji]. Sources: NASA (space), NOAA (oceans and Earth), National Geographic Kids-level facts.
+const FACTS = {
+  maps: [["What does a map key tell you?", "what the pictures on the map mean", "how old the map is", "who made the map", "🗺️"], ["On most maps, which way is up?", "north", "south", "west", "🧭"],
+    ["What do we call the picture that shows north, south, east, and west?", "a compass rose", "a map key", "a ruler", "🧭"], ["Where does the sun rise?", "in the east", "in the west", "in the north", "🌅"],
+    ["Where does the sun set?", "in the west", "in the east", "in the south", "🌇"], ["What is the opposite of north?", "south", "east", "west", "🧭"]],
+  land: [["What do we call land with water all around it?", "an island", "a mountain", "a desert", "🏝️"], ["What do we call very tall, steep land?", "a mountain", "a lake", "a valley", "⛰️"],
+    ["What is a mountain that can erupt with hot lava?", "a volcano", "a hill", "a canyon", "🌋"], ["What do we call water with land all around it?", "a lake", "an ocean", "a river", "🏞️"],
+    ["What do we call water that flows across the land to the sea?", "a river", "a pond", "a glacier", "🌊"], ["What is a very dry place with little rain?", "a desert", "a rainforest", "a swamp", "🏜️"],
+    ["What do we call land with water on three sides?", "a peninsula", "an island", "a plateau", "🗺️"]],
+  solar: [["Which planet do we live on?", "Earth", "Mars", "Venus", "🌍"], ["Which planet is closest to the Sun?", "Mercury", "Earth", "Neptune", "☀️"], ["Which is the biggest planet?", "Jupiter", "Earth", "Mars", "🪐"],
+    ["Which planet is famous for its big, bright rings?", "Saturn", "Mercury", "Mars", "🪐"], ["Which planet is called the Red Planet?", "Mars", "Venus", "Jupiter", "🔴"], ["What is the Sun?", "a star", "a planet", "a moon", "☀️"],
+    ["How many planets are in our solar system?", "8", "5", "12", "🌌"], ["Which planet is the hottest?", "Venus", "Mercury", "Neptune", "🔥"], ["What goes around the Earth?", "the Moon", "the Sun", "Mars", "🌙"],
+    ["Which planet is farthest from the Sun?", "Neptune", "Earth", "Saturn", "🔵"]],
+  food: [["Where does the energy in a food chain start?", "the Sun", "the moon", "rocks", "☀️"], ["What do we call an animal that eats only plants?", "an herbivore", "a carnivore", "an omnivore", "🐰"],
+    ["What do we call an animal that eats only meat?", "a carnivore", "an herbivore", "a producer", "🦁"], ["What do we call an animal that eats plants and meat?", "an omnivore", "an herbivore", "a carnivore", "🐻"],
+    ["Plants make their own food. What are they called?", "producers", "consumers", "predators", "🌱"], ["Grass, then a rabbit, then a fox. What does the fox eat?", "the rabbit", "the grass", "the sun", "🦊"],
+    ["What do worms and mushrooms do in nature?", "break down dead plants and animals", "make sunlight", "eat only fish", "🍄"], ["What do plants need to make food?", "sunlight, water, and air", "only sand", "only darkness", "🌿"]],
+  ocean: [["What is the biggest animal on Earth?", "the blue whale", "the great white shark", "the elephant", "🐋"], ["How do fish breathe?", "with gills", "with lungs", "with their fins", "🐟"],
+    ["Is a whale a fish or a mammal?", "a mammal", "a fish", "a bird", "🐳"], ["How many arms does an octopus have?", "8", "6", "10", "🐙"], ["Which ocean is the biggest?", "the Pacific Ocean", "the Atlantic Ocean", "the Indian Ocean", "🌊"],
+    ["Where do sea turtles lay their eggs?", "on sandy beaches", "on coral", "in trees", "🐢"], ["What is a coral reef made of?", "tiny animals called coral", "plastic", "seaweed only", "🪸"], ["How many arms do most sea stars have?", "5", "3", "8", "⭐"]],
+  earth: [["What is the line around the middle of the Earth called?", "the equator", "the North Pole", "a river", "🌍"], ["Lines that go east and west around the Earth are called…", "latitude", "longitude", "borders", "🌐"],
+    ["Lines that go from the North Pole to the South Pole are called…", "longitude", "latitude", "rivers", "🌐"], ["Is the United States north or south of the equator?", "north", "south", "on it", "🇺🇸"],
+    ["Where is it usually warmer?", "near the equator", "near the poles", "at the North Pole", "☀️"], ["What is the line of longitude at 0 degrees called?", "the Prime Meridian", "the equator", "the Arctic Circle", "📍"],
+    ["The equator splits the Earth into two…", "hemispheres", "oceans", "countries", "🌍"]],
+  body: [["What pumps blood around your body?", "the heart", "the lungs", "the brain", "❤️"], ["What do you breathe with?", "the lungs", "the stomach", "the heart", "🫁"], ["What helps you think?", "the brain", "the bones", "the skin", "🧠"],
+    ["How many bones does a grown-up have?", "206", "50", "1,000", "🦴"], ["What protects your brain?", "the skull", "the ribs", "the knee", "💀"], ["Where does food go after you swallow?", "the stomach", "the lungs", "the heart", "🍽️"],
+    ["Which is one of the five senses?", "taste", "sleep", "jump", "👅"], ["What is the biggest organ of your body?", "the skin", "the heart", "the eye", "🖐️"]],
+};
+const MAPGRID = ["🏠", "🌳", "🏫", "🏪", "🛝", "🌊", "⛪", "🏥", "🚒"];
+Object.assign(GEN, {
+  numbers(lv, only) {
+    const type = pick(only || [["build", "evenodd"], ["place", "build", "evenodd"], ["place", "compare", "round"], ["place", "compare", "round"], ["round", "compare", "place"]][lv - 1]);
+    const big = lv >= 4, lo = big ? 1000 : 100, hi = big ? 9999 : 999;
+    if (type === "evenodd") {
+      const n = rnd(1, lv <= 1 ? 20 : 999), even = n % 2 === 0;
+      return { key: `eo${n}`, prompt: `Is ${fmt(n)} even or odd?`, say: `Is ${n} even, or odd?`, pic: n <= 20 ? `<div class="pairs">${Array.from({ length: n }, (_, i) => `<span>${i % 2 ? "🔵" : "🔴"}</span>`).join("")}</div>` : `<div class="bigtext">${fmt(n)}</div>`,
+        choices: [{ key: "even", html: "even", say: "even", kind: "text" }, { key: "odd", html: "odd", say: "odd", kind: "text" }], answer: even ? "even" : "odd",
+        after: `${fmt(n)} is ${even ? "even" : "odd"}. Even numbers end in 0, 2, 4, 6, or 8.` };
+    }
+    if (type === "round") {
+      const to = lv >= 4 && Math.random() < 0.5 ? 100 : 10, n = to === 10 ? rnd(11, 999) : rnd(101, 9999);
+      if (n % to === 0) return GEN.numbers(lv, only);
+      const ans = Math.round(n / to) * to, down = Math.floor(n / to) * to, up = down + to;
+      const opts = [...new Set([ans, down, up, ans + to, Math.max(0, ans - to)])].slice(0, 4).sort((a, b) => a - b);
+      return { key: `rd${n}${to}`, prompt: `Round ${fmt(n)} to the nearest ${to === 10 ? "ten" : "hundred"}.`, say: `Round ${n} to the nearest ${to === 10 ? "ten" : "hundred"}.`, pic: `<div class="bigtext">${fmt(n)}</div>`,
+        choices: numChF(opts), answer: String(ans), after: `${fmt(n)} is closer to ${fmt(ans)} than to ${fmt(ans === down ? up : down)}. Look at the ${to === 10 ? "ones" : "tens"} digit: 5 or more rounds up.` };
+    }
+    if (type === "compare") {
+      const base = rnd(lo, hi - 200), ns = [...new Set([base, base + rnd(1, 90), base + rnd(91, 190)])], most = Math.random() < 0.5;
+      const ans = most ? Math.max(...ns) : Math.min(...ns);
+      return { key: `cmp${ns.join(",")}${most}`, prompt: `Which number is the ${most ? "biggest" : "smallest"}?`, say: `Which number is the ${most ? "biggest" : "smallest"}? ${ns.join(", ")}?`, pic: "",
+        choices: numChF(shuffle(ns)), answer: String(ans), after: `${fmt(ans)} is the ${most ? "biggest" : "smallest"}. Compare the biggest place first.` };
+    }
+    let n;
+    do { n = rnd(lo, hi); } while (new Set(String(n)).size !== String(n).length || String(n).includes("0"));
+    const digits = String(n);
+    if (type === "build") {
+      const h = Math.floor(n / 100) % 10, t = Math.floor(n / 10) % 10, o = n % 10, th = Math.floor(n / 1000);
+      const words = `${th ? plural(th, "thousand", "thousands") + ", " : ""}${plural(h, "hundred", "hundreds")}, ${plural(t, "ten", "tens")}, and ${plural(o, "one", "ones")}`;
+      const swaps = [...new Set([n, Number(digits.split("").reverse().join("")), Number(digits.slice(0, -2) + digits.slice(-1) + digits.slice(-2, -1)), n + 10, n - 100].filter((x) => x >= lo / 10))].slice(0, 4);
+      return { key: `bd${n}`, prompt: `What number is ${words}?`, say: `What number is ${words}?`, pic: !big ? hundreds(n) : "",
+        choices: numChF(swaps.sort((a, b) => a - b)), answer: String(n), after: `${words} is ${fmt(n)}.` };
+    }
+    const pos = rnd(0, digits.length - 1), d = Number(digits[pos]), val = d * 10 ** (digits.length - 1 - pos);
+    const opts = [...new Set([d, d * 10, d * 100, d * 1000].filter((x) => x <= hi))].slice(0, 4);
+    if (!opts.includes(val)) opts[opts.length - 1] = val;
+    return { key: `pv${n}${pos}`, prompt: `What is the value of the ${d} in ${fmt(n)}?`, say: `What is the value of the ${d} in ${n}?`, pic: `<div class="bigtext">${digits.split("").map((c, i) => (i === pos ? `<u>${c}</u>` : c)).join("")}</div>`,
+      choices: numChF(opts.sort((a, b) => a - b)), answer: String(val), after: `The ${d} is in the ${["ones", "tens", "hundreds", "thousands"][digits.length - 1 - pos]} place, so it means ${fmt(val)}.` };
+  },
+  arith(lv, only, xo = {}) {
+    const type = pick(only || [["add2"], ["add2", "sub2"], ["mult", "div", "array"], ["mult2", "longdiv"], ["ops", "mult2", "longdiv"]][lv - 1]);
+    const tables = xo.tables || [2, 3, 4, 5, 6, 7, 8, 9, 10];
+    const eq = (s) => `<div class="eq">${s}</div>`;
+    if (type === "add2" || type === "sub2") {
+      let a = rnd(12, 89), b = rnd(11, 99 - a);
+      if (type === "sub2") { b = rnd(11, a - 1); }
+      const ans = type === "add2" ? a + b : a - b;
+      return { key: `${type}${a},${b}`, prompt: type === "add2" ? "Add them up!" : "Take away!", say: `What is ${a} ${type === "add2" ? "plus" : "minus"} ${b}?`, pic: eq(`${a} ${type === "add2" ? "+" : "−"} ${b} = <u>?</u>`),
+        choices: numChF(nearNums(ans, [10, 1, 11, 9])), answer: String(ans),
+        after: type === "add2" ? `${a} + ${b}: add the tens, ${Math.floor(a / 10) * 10} + ${Math.floor(b / 10) * 10} = ${Math.floor(a / 10) * 10 + Math.floor(b / 10) * 10}, then the ones. ${ans}!` : `${a} − ${b} = ${ans}. Check: ${ans} + ${b} = ${a}.` };
+    }
+    if (type === "mult" || type === "array") {
+      const a = pick(tables), b = rnd(type === "array" ? 2 : 1, type === "array" ? 6 : 10), ans = a * b;
+      if (type === "array" && a <= 6) {
+        const [em] = pick(THINGS);
+        return { key: `arr${a}x${b}`, prompt: `${a} rows of ${b}. How many in all?`, say: `There are ${a} rows, with ${b} in each row. How many in all?`, pic: `<div class="arr" style="--c:${b}">${Array.from({ length: a * b }, () => `<span>${em}</span>`).join("")}</div>`,
+          choices: numChF(nearNums(ans, [a, b, 1])), answer: String(ans), after: `${a} rows of ${b} is ${a} × ${b} = ${ans}.` };
+      }
+      return { key: `mul${a}x${b}`, prompt: "Multiply!", say: `What is ${a} times ${b}?`, pic: eq(`${a} × ${b} = <u>?</u>`), choices: numChF(nearNums(ans, [a, b, 1].filter((x) => x > 0))), answer: String(ans),
+        after: `${a} × ${b} = ${ans}. That's ${b} groups of ${a}.` };
+    }
+    if (type === "div") {
+      const a = pick(tables), b = rnd(1, 10), n = a * b;
+      return { key: `div${n}/${a}`, prompt: "Divide!", say: `What is ${n} divided by ${a}?`, pic: eq(`${n} ÷ ${a} = <u>?</u>`), choices: numChF(nearNums(b, [1, 2, 3], 4, 0)), answer: String(b),
+        after: `${n} ÷ ${a} = ${b}, because ${a} × ${b} = ${n}. Share ${n} into ${a} equal groups: ${b} in each.` };
+    }
+    if (type === "mult2") {
+      const a = rnd(12, 99), b = rnd(2, 9), ans = a * b, t = Math.floor(a / 10) * 10, o = a % 10;
+      return { key: `m2${a}x${b}`, prompt: "Multiply!", say: `What is ${a} times ${b}?`, pic: eq(`${a} × ${b} = <u>?</u>`), choices: numChF(nearNums(ans, [10, b, 2 * b])), answer: String(ans),
+        after: `Break it up: ${t} × ${b} = ${t * b}, and ${o} × ${b} = ${o * b}. ${t * b} + ${o * b} = ${ans}.` };
+    }
+    if (type === "longdiv") {
+      const b = rnd(2, 9), q = rnd(12, lv >= 5 ? 199 : 99), n = b * q;
+      return { key: `ld${n}/${b}`, prompt: "Divide!", say: `What is ${n} divided by ${b}?`, pic: eq(`${n} ÷ ${b} = <u>?</u>`), choices: numChF(nearNums(q, [1, 10, 2], 4, 1)), answer: String(q),
+        after: `${n} ÷ ${b} = ${q}. Check: ${q} × ${b} = ${n}.` };
+    }
+    const a = rnd(2, 9), c = rnd(2, 6), form = rnd(0, 2), b = form === 2 ? rnd(1, Math.floor((a * c) / 2) - 1) : rnd(2, 9);  // a·c − 2b stays above 0
+    const [txt, ans, wrong] = form === 0 ? [`${a} + ${b} × ${c}`, a + b * c, (a + b) * c] : form === 1 ? [`(${a} + ${b}) × ${c}`, (a + b) * c, a + b * c] : [`${a * c} − ${b} × 2`, a * c - b * 2, (a * c - b) * 2];
+    const opts = [...new Set([ans, wrong, ans + 1, ans + 2, ans - 1])].filter((x) => x >= 0).slice(0, 4);
+    return { key: `ops${txt}`, prompt: "Do it in the right order!", say: `What is ${txt.replace("×", "times").replace("−", "minus").replace("+", "plus")}?`, pic: eq(`${txt} = <u>?</u>`),
+      choices: numChF(opts.sort((x, y) => x - y)), answer: String(ans), after: `Parentheses first, then times and divide, then plus and minus. ${txt} = ${ans}.` };
+  },
+  money(lv, only) {
+    const type = pick(only || [["count"], ["count", "notation"], ["count", "change"], ["change", "notation"], ["change", "count"]][lv - 1]);
+    if (type === "change") {
+      const items = [["🍪", "a cookie"], ["🧃", "a juice"], ["🍎", "an apple"], ["✏️", "a pencil"], ["🎈", "a balloon"]], [em, it] = pick(items);
+      const pay = pick([100, 100, 500]), cost = pay === 100 ? 5 * rnd(3, 19) : 5 * rnd(25, 95), ans = pay - cost;
+      return { key: `ch${pay}-${cost}`, prompt: `${cap(it)} costs ${money(cost)}. You pay ${money(pay)}. How much change?`, say: `${cap(it)} costs ${moneySay(cost)}. You pay ${moneySay(pay)}. How much change do you get back?`, pic: `<div class="flagbig">${em}</div>`,
+        choices: nearNums(ans, [5, 10, 25], 4, 5).map((v) => ({ key: String(v), html: money(v), say: moneySay(v), kind: "num" })), answer: String(ans),
+        after: `${money(pay)} − ${money(cost)} = ${money(ans)}. Count up from ${money(cost)} to ${money(pay)}.` };
+    }
+    if (type === "notation") {
+      const c = rnd(101, 999), opts = shuffle([c, Math.floor(c / 100) * 100 + ((c % 10) * 10 + Math.floor((c % 100) / 10)), c + 100, c - 100].filter((x, i, a) => x > 0 && a.indexOf(x) === i)).slice(0, 3);
+      if (!opts.includes(c)) opts[0] = c;
+      return { key: `nt${c}`, prompt: `Which is the same as ${c}¢?`, say: `Which is the same as ${c} cents?`, pic: "", choices: opts.map((v) => ({ key: String(v), html: money(v), say: moneySay(v), kind: "text" })), answer: String(c),
+        after: `100 cents is 1 dollar, so ${c}¢ is ${money(c)}.` };
+    }
+    const bills = lv <= 1 ? Array(rnd(1, 3)).fill(1) : shuffle([5, 1, 1, 10]).slice(0, rnd(1, 3)).sort((a, b) => b - a), coins = coinSet(Math.min(lv + 2, 5));
+    const total = bills.reduce((s, v) => s + v * 100, 0) + sum(coins);
+    return { key: `mc${bills.join("")}${coins.join("")}`, prompt: "How much money?", say: "How much money is this? Count the dollars, then the coins.", pic: moneyPic(bills, coins),
+      choices: nearNums(total, [100, 10, 5, 25], 4, 1).map((v) => ({ key: String(v), html: money(v), say: moneySay(v), kind: "num" })), answer: String(total),
+      after: `${plural(total / 100 | 0, "dollar", "dollars")} and ${cents(total % 100)}: ${money(total)}.` };
+  },
+  graph(lv, only) {
+    const type = pick(only || ["howmany", "most", "more", "total"]), step = lv >= 3 ? 2 : 1;
+    const rows = sample(BAR_ITEMS.slice(Math.random() < 0.5 ? 0 : 4, Math.random() < 0.5 ? 8 : 12), lv >= 2 ? 4 : 3).map(([em, name]) => [em, name, rnd(1, 9) * step]);
+    if (new Set(rows.map((r) => r[2])).size !== rows.length) return GEN.graph(lv, only);
+    const pic = barGraph(rows, step), [a, b] = sample(rows, 2);
+    if (type === "most") {
+      const most = Math.random() < 0.6, r = rows.reduce((x, y) => ((most ? y[2] > x[2] : y[2] < x[2]) ? y : x));
+      return { key: `gm${rows.map((x) => x[2]).join()}${most}`, prompt: `Which has the ${most ? "most" : "fewest"}?`, say: `Look at the graph. Which has the ${most ? "most" : "fewest"}?`, pic,
+        choices: rows.map(([em, name]) => ({ key: em, html: em, say: name, kind: "pic" })), answer: r[0], after: `The ${r[1]} bar is the ${most ? "tallest" : "shortest"}: ${r[2]}.` };
+    }
+    if (type === "more") {
+      const [hi2, lo2] = a[2] > b[2] ? [a, b] : [b, a], ans = hi2[2] - lo2[2];
+      return { key: `gd${hi2[0]}${lo2[0]}${ans}`, prompt: `How many more ${hi2[0]} than ${lo2[0]}?`, say: `How many more ${hi2[1]} than ${lo2[1]}?`, pic, choices: numChF(nearNums(ans, [1, 2, step], 4, 0)), answer: String(ans),
+        after: `${hi2[2]} − ${lo2[2]} = ${ans}.` };
+    }
+    if (type === "total") {
+      const ans = rows.reduce((s, r) => s + r[2], 0);
+      return { key: `gt${rows.map((x) => x[2]).join()}`, prompt: "How many in all?", say: "How many are there in all? Add up all the bars.", pic, choices: numChF(nearNums(ans, [1, 2, 3])), answer: String(ans), after: `${rows.map((r) => r[2]).join(" + ")} = ${ans}.` };
+    }
+    return { key: `gh${a[0]}${a[2]}`, prompt: `How many ${a[0]}?`, say: `How many ${a[1]}? Find the top of the bar.`, pic, choices: numChF(nearNums(a[2], [step, 2 * step, 1], 4, 0)), answer: String(a[2]), after: `The ${a[1]} bar goes up to ${a[2]}.` };
+  },
+  measure(lv, only) {
+    const type = pick(only || [["ruler"], ["ruler", "area"], ["area", "perimeter"], ["angle", "perimeter"], ["volume", "angle"]][lv - 1]);
+    if (type === "ruler") {
+      const len = rnd(1, 6), [em, name] = pick([["🖍️", "crayon"], ["✏️", "pencil"], ["🐛", "worm"], ["🥕", "carrot"]]);
+      return { key: `rl${len}${em}`, prompt: `How long is the ${name}?`, say: `How many inches long is the ${name}? Start at 0.`, pic: rulerPic(len, em),
+        choices: nearNums(len, [1, 2], 4, 1).map((v) => ({ key: String(v), html: `${v} in.`, say: plural(v, "inch", "inches"), kind: "num" })), answer: String(len), after: `It goes from 0 to ${len}. It's ${plural(len, "inch", "inches")} long.` };
+    }
+    if (type === "angle") {
+      const kind = pick(["right", "acute", "obtuse"]), deg = kind === "right" ? 90 : kind === "acute" ? pick([30, 40, 50, 60]) : pick([120, 130, 140, 150]);
+      return { key: `an${deg}`, prompt: "What kind of angle is this?", say: "What kind of angle is this? Right, acute, or obtuse?", pic: anglePic(deg),
+        choices: ["right", "acute", "obtuse"].map((k) => ({ key: k, html: k, say: k, kind: "text" })), answer: kind,
+        after: { right: "A right angle is a square corner, like a book.", acute: "An acute angle is smaller than a square corner.", obtuse: "An obtuse angle is bigger than a square corner." }[kind] };
+    }
+    if (type === "volume") {
+      const l = rnd(2, 4), w = rnd(2, 3), h = rnd(2, 3), ans = l * w * h;
+      return { key: `vol${l}${w}${h}`, prompt: `A box is ${l} cubes long, ${w} wide, and ${h} tall. How many cubes?`, say: `A box is ${l} cubes long, ${w} cubes wide, and ${h} cubes tall. How many cubes fill it?`, pic: layersPic(l, w, h),
+        choices: numChF(nearNums(ans, [l, w, h, 1])), answer: String(ans), after: `Each layer has ${l} × ${w} = ${l * w}. ${h} layers: ${l * w} × ${h} = ${ans} cubes.` };
+    }
+    const w = rnd(2, 7), h = rnd(2, 5), grid = lv <= 3, area = type === "area";
+    const ans = area ? w * h : 2 * (w + h);
+    return { key: `${type}${w}x${h}${grid}`, prompt: `What is the ${area ? "area" : "perimeter"}?`, say: area ? "What is the area? How many squares cover it?" : "What is the perimeter? Add up all the sides.", pic: gridRect(w, h, grid),
+      choices: numChF(nearNums(ans, area ? [w, h, 1] : [2, 1, w], 4, 1)), answer: String(ans),
+      after: area ? `${w} × ${h} = ${ans} square units.` : `${w} + ${h} + ${w} + ${h} = ${ans} units around.` };
+  },
+  frac(lv, only) {
+    const type = pick(only || [["name"], ["name", "compare"], ["equiv", "compare", "add"], ["dec", "deccompare", "equiv"], ["mult", "decadd", "add"]][lv - 1]);
+    if (type === "name") {
+      const d = pick(lv <= 1 ? [2, 3, 4] : [2, 3, 4, 6, 8]), n = rnd(1, d - 1), opts = shuffle([[n, d], [d - n === n ? n + 1 : d - n, d], [n, { 2: 4, 3: 4, 4: 3, 6: 8, 8: 6 }[d]]].filter((x, i, a) => x[0] < x[1] && a.findIndex((y) => y[0] === x[0] && y[1] === x[1]) === i));
+      return { key: `fn${n}/${d}`, prompt: "What part is shaded?", say: "What fraction is shaded orange?", pic: fracPic(n, d), choices: frCh(opts), answer: `${n}/${d}`,
+        after: `${n} of ${d} equal parts are shaded: ${frSay(n, d)}.` };
+    }
+    if (type === "equiv") {
+      const [a, b] = pick([[1, 2], [1, 3], [2, 3], [1, 4], [3, 4]]), k = rnd(2, 4), right = [a * k, b * k];
+      const wrong = [[a * k + 1, b * k], [a, b * k], [a * k, b * k + 1]].filter((x) => x[0] < x[1] && x[0] * b !== x[1] * a);
+      return { key: `eq${a}/${b}x${k}`, prompt: `Which fraction is the same as ${a}/${b}?`, say: `Which fraction is equal to ${frSay(a, b)}?`, pic: `<div class="two">${fracPic(a, b, "bar")}</div>`,
+        choices: frCh(shuffle([right, ...wrong.slice(0, 2)])), answer: `${right[0]}/${right[1]}`, after: `${frSay(a, b)} = ${frSay(right[0], right[1])}. Multiply the top and bottom by ${k}.` };
+    }
+    if (type === "compare") {
+      const d = pick([4, 5, 6, 8, 10]); let a = rnd(1, d - 1), b = rnd(1, d - 1); while (b === a) b = rnd(1, d - 1);
+      return { key: `fc${a}/${b}/${d}`, prompt: "Which is bigger?", say: `Which is bigger: ${frSay(a, d)}, or ${frSay(b, d)}?`, pic: `<div class="two">${fracPic(a, d, "bar")}${fracPic(b, d, "bar")}</div>`,
+        choices: frCh([[a, d], [b, d]]), answer: `${Math.max(a, b)}/${d}`, after: `Same size parts, so more parts is bigger: ${frSay(Math.max(a, b), d)}.` };
+    }
+    if (type === "add") {
+      const d = pick([4, 5, 6, 8, 10]), a = rnd(1, d - 2), b = rnd(1, d - 1 - a), s = a + b;
+      return { key: `fa${a}+${b}/${d}`, prompt: "Add the fractions!", say: `What is ${frSay(a, d)} plus ${frSay(b, d)}?`, pic: `<div class="eq">${fr(a, d)} + ${fr(b, d)} = <u>?</u></div>`,
+        choices: frCh(shuffle([[s, d], [s, 2 * d], [s + 1 <= d ? s + 1 : s - 1, d]])), answer: `${s}/${d}`, after: `Add the tops, keep the bottom: ${a} + ${b} = ${s}, so ${frSay(s, d)}.` };
+    }
+    if (type === "mult") {
+      const d = pick([2, 3, 4, 5]), k = rnd(2, 6), n = d * k;
+      return { key: `fm${n}/${d}`, prompt: `What is 1/${d} of ${n}?`, say: `What is one ${DEN[d][0]} of ${n}?`, pic: `<div class="eq">${fr(1, d)} × ${n} = <u>?</u></div>`,
+        choices: numChF(nearNums(k, [1, 2, d], 4, 1)), answer: String(k), after: `Split ${n} into ${d} equal groups: ${k} in each. ${n} ÷ ${d} = ${k}.` };
+    }
+    if (type === "dec") {
+      const t = rnd(1, 9), hund = lv >= 5 || Math.random() < 0.4, v = hund ? rnd(11, 99) : t, txt = hund ? `0.${String(v).padStart(2, "0")}` : `0.${t}`;
+      const words = hund ? `${v} hundredths` : `${t} tenths`;
+      const opts = shuffle([txt, hund ? `0.${String(v).split("").reverse().join("")}` : `0.0${t}`, hund ? `${v}.0` : `${t}.0`].filter((x, i, a) => a.indexOf(x) === i));
+      return { key: `dc${txt}`, prompt: `Which decimal is ${words}?`, say: `Which decimal is ${words}?`, pic: hund ? "" : fracPic(t, 10, "bar"),
+        choices: opts.map((x) => ({ key: x, html: x, say: x, kind: "text" })), answer: txt, after: `${words} is written ${txt}.` };
+    }
+    if (type === "deccompare") {
+      const a = (rnd(1, 9) / 10).toFixed(1), b = (rnd(10, 99) / 100).toFixed(2);
+      if (Number(a) === Number(b)) return GEN.frac(lv, only);
+      const big = Number(a) > Number(b) ? a : b;
+      return { key: `dk${a}${b}`, prompt: "Which is bigger?", say: `Which is bigger: ${a}, or ${b}?`, pic: "", choices: [a, b].map((x) => ({ key: x, html: x, say: x, kind: "text" })), answer: big,
+        after: `${a} is the same as ${a}0. Compare ${a}0 and ${b}: ${big} is bigger.` };
+    }
+    const a = rnd(10, 90) / 100, b = rnd(10, 90) / 100, s = Math.round((a + b) * 100) / 100;
+    const opts = [...new Set([s, Math.round((s + 0.1) * 100) / 100, Math.round((s - 0.1) * 100) / 100, Math.round((s + 0.01) * 100) / 100])].slice(0, 4).sort((x, y) => x - y);
+    return { key: `da${a}+${b}`, prompt: "Add the decimals!", say: `What is ${a.toFixed(2)} plus ${b.toFixed(2)}?`, pic: `<div class="eq">${a.toFixed(2)} + ${b.toFixed(2)} = <u>?</u></div>`,
+      choices: opts.map((x) => ({ key: x.toFixed(2), html: x.toFixed(2), say: x.toFixed(2), kind: "text" })), answer: s.toFixed(2), after: `Line up the decimal points and add: ${s.toFixed(2)}. It's like adding money!` };
+  },
+  coord(lv) {
+    const x = rnd(1, 5), y = rnd(1, 5);
+    const opts = [[x, y], [y, x], [x, y === 5 ? 4 : y + 1]].filter((p, i, a) => a.findIndex((q) => q[0] === p[0] && q[1] === p[1]) === i);
+    while (opts.length < 3) { const q = [rnd(0, 6), rnd(0, 6)]; if (!opts.some((o) => o[0] === q[0] && o[1] === q[1])) opts.push(q); }
+    return { key: `co${x},${y}`, prompt: "Where is the star?", say: "What are the coordinates of the star? Go across first, then up.", pic: coordPic(x, y),
+      choices: shuffle(opts).map(([a, b]) => ({ key: `${a},${b}`, html: `(${a}, ${b})`, say: `${a}, ${b}`, kind: "text" })), answer: `${x},${y}`, after: `Go across ${x}, then up ${y}: (${x}, ${y}).` };
+  },
+  words(lv, only) {
+    const type = pick(only || [["vowel", "team"], ["vowel", "read"], ["noun", "read", "syn", "ant"], ["main", "syn", "prefix"], ["prefix", "main", "noun", "read"]][lv - 1]);
+    const txt = (list) => list.map((x) => ({ key: x, html: esc(x), say: x, kind: "text" }));
+    if (type === "vowel" || type === "team") {
+      const [w, em, team] = pick(VOWEL_WORDS);
+      if (type === "team") {
+        const opts = shuffle([team, ...sample(["ai", "ee", "oa", "ea", "oo"].filter((t) => t !== team), 2)]);
+        return { key: `vt${w}`, prompt: `Which letters make the vowel sound in "${w}"?`, say: `${w}. Which two letters work together to make the vowel sound?`, pic: `<div class="flagbig">${em}</div><div class="bigtext">${w}</div>`,
+          choices: txt(opts), answer: team, after: `In ${w}, the letters ${team.split("").join(" and ")} work as a team.` };
+      }
+      const wrong = sample(VOWEL_WORDS.filter((x) => x[0] !== w && x[2] === team).concat(VOWEL_WORDS.filter((x) => x[0] !== w)), 2).map((x) => x[0]);
+      return { key: `vw${w}`, prompt: "Which word goes with the picture?", say: "Read the words. Which one goes with the picture?", pic: `<div class="flagbig">${em}</div>`, choices: txt(shuffle([w, ...new Set(wrong)].slice(0, 3))), answer: w, after: `${cap(w)}! The ${team} makes one sound.` };
+    }
+    if (type === "noun") {
+      const [s2, n, v, a] = pick(SENTENCES), kind = pick(["noun", "verb", "adjective"]), ans = { noun: n, verb: v, adjective: a }[kind];
+      return { key: `pos${s2}${kind}`, prompt: `Which word is the ${kind}?`, say: `${s2} Which word is the ${kind}? ${{ noun: "A noun is a person, place, or thing.", verb: "A verb is an action word.", adjective: "An adjective describes something." }[kind]}`,
+        pic: `<div class="passage">${esc(s2)}</div>`, choices: txt(shuffle([n, v, a])), answer: ans,
+        after: `"${ans}" is the ${kind}. ${{ noun: "It's a person, place, or thing.", verb: "It's the action.", adjective: "It describes something." }[kind]}` };
+    }
+    if (type === "syn" || type === "ant") {
+      const L = type === "syn" ? SYN : ANT, [w, ans] = pick(L), wrong = sample(L.filter((p) => !p.includes(w)).flat(), 2);
+      return { key: `${type}${w}`, prompt: `Which word means the ${type === "syn" ? "same as" : "opposite of"} "${w}"?`, say: `Which word means the ${type === "syn" ? "same as" : "opposite of"} ${w}?`, pic: "",
+        choices: txt(shuffle([ans, ...wrong])), answer: ans, after: `"${cap(ans)}" means the ${type === "syn" ? "same as" : "opposite of"} "${w}".` };
+    }
+    if (type === "prefix") {
+      const [w, right, ...wrong] = pick(AFFIX);
+      return { key: `af${w}`, prompt: `What does "${w}" mean?`, say: `What does ${w} mean?`, pic: `<div class="bigtext">${w}</div>`, choices: txt(shuffle([right, ...wrong])), answer: right,
+        after: `"${cap(w)}" means ${right}. ${w.startsWith("un") ? "Un means not." : w.startsWith("re") ? "Re means again." : w.startsWith("pre") ? "Pre means before." : w.endsWith("ful") ? "Ful means full of." : "Less means without."}` };
+    }
+    const p = pick(PASSAGES);
+    if (type === "main") {
+      return { key: `mi${p.title}`, prompt: "What is this story mostly about?", say: `${p.text} What is this story mostly about?`, pic: `<div class="passage"><b>${esc(p.title)}</b><br>${esc(p.text)}</div>`,
+        choices: txt(shuffle(p.main)), answer: p.main[0], after: `It's mostly about ${p.main[0]}.` };
+    }
+    const [q, ...ch] = pick(p.qs);
+    return { key: `rq${p.title}${q}`, prompt: q, say: `${p.text} ${q}`, pic: `<div class="passage"><b>${esc(p.title)}</b><br>${esc(p.text)}</div>`, choices: txt(shuffle(ch)), answer: ch[0], after: `The story says: ${ch[0]}.` };
+  },
+  facts(lv, only, xo = {}) {
+    const set = xo.set || pick(Object.keys(FACTS));
+    if (set === "maps" && (only || []).includes("grid") && Math.random() < 0.5) {
+      const g = shuffle(MAPGRID), dir = pick(["north", "south", "east", "west"]), d = { north: -3, south: 3, east: 1, west: -1 }[dir];
+      return { key: `mg${g[4]}${dir}${g[4 + d]}`, prompt: `What is ${dir} of the ${g[4]}?`, say: `Look at the map. What is ${dir} of the middle picture? North is up.`,
+        pic: `<div class="mapgrid"><span class="nlab">N ⬆</span>${g.map((e) => `<span>${e}</span>`).join("")}</div>`, choices: shuffle([g[4 + d], ...sample(g.filter((x, i) => i !== 4 + d && i !== 4), 2)]).map((e) => ({ key: e, html: e, kind: "pic", say: "" })),
+        answer: g[4 + d], after: `${cap(dir)} is ${{ north: "up", south: "down", east: "to the right", west: "to the left" }[dir]} on this map.` };
+    }
+    const [q, a, w1, w2, em] = pick(FACTS[set]);
+    return { key: `fx${q}`, prompt: q, say: q, pic: `<div class="flagbig">${em}</div>`, choices: shuffle([a, w1, w2]).map((x) => ({ key: x, html: esc(x), say: x, kind: "text" })), answer: a, after: `${cap(a)}!` };
+  },
+});
+
 // ---------- adventure: levels and lessons ----------
 // Each lesson: a few slides to learn from (tap through, read aloud), then 5 practice questions (p = question maker, level, types).
 // The order follows free, trusted curricula: Common Core K-5 math, the UFLI / CKLA phonics order, and the Core Knowledge Sequence for geography.
@@ -1315,18 +1718,168 @@ const LEVELS = [
       ...[["TX", "Austin is the capital of Texas."], ["FL", "Tallahassee is the capital of Florida."], ["CA", "Sacramento is the capital of California."], ["NY", "Albany is the capital of New York. It's not New York City!"]]
         .map(([ab, text]) => T.show(usMap({ hl: GEO.us.states.findIndex((x) => x.abbr === ab) }), text))] },
   ] },
-  { n: 9, em: "🏜️", name: "Desert Dunes", soon: "Numbers to 1,000 · vowel teams · maps and map keys" },
-  { n: 10, em: "🎪", name: "Circus Town", soon: "Adding to 100 · money · reading stories" },
-  { n: 11, em: "🌋", name: "Volcano Island", soon: "Time to 5 minutes · graphs · land and water" },
-  { n: 12, em: "🏰", name: "Castle Hill", soon: "Times tables · main idea · countries of Europe" },
-  { n: 13, em: "🐉", name: "Dragon Cave", soon: "Fractions · nouns and verbs · the solar system" },
-  { n: 14, em: "🌌", name: "Star Sky", soon: "Area and perimeter · world flags" },
-  { n: 15, em: "🌴", name: "Jungle River", soon: "Big multiplying · long division · ecosystems" },
-  { n: 16, em: "🐋", name: "Deep Sea", soon: "Adding fractions · ocean life" },
-  { n: 17, em: "🗻", name: "Mountain Top", soon: "Decimals · angles · latitude and longitude" },
-  { n: 18, em: "🛰️", name: "Space Station", soon: "Multiplying fractions · world geography" },
-  { n: 19, em: "🪐", name: "Planet Rings", soon: "Volume · graphs on a grid · the human body" },
-  { n: 20, em: "👑", name: "Crown Castle", soon: "The big review: earn the crown!" },
+  { n: 9, em: "🏜️", name: "Desert Dunes", lessons: [
+    { id: "9a", s: "math", t: "Numbers to 1,000", p: { g: "numbers", lv: 2, only: ["place", "build"] }, slides: () => [
+      T.show(hundreds(100), "This big square is a hundred: 10 tens, or 100 little blocks."),
+      T.show(hundreds(243), "2 hundreds, 4 tens, and 3 ones make 243."), T.show(`<div class="bigtext"><u>3</u>47</div>`, "In 347, the 3 is in the hundreds place. It means 300!")] },
+    { id: "9b", s: "math", t: "Even and odd", p: { g: "numbers", lv: 2, only: ["evenodd"] }, slides: () => [
+      T.show(`<div class="pairs">${"<span>🔴</span><span>🔵</span>".repeat(3)}</div>`, "6 makes pairs with none left over. 6 is even."),
+      T.show(`<div class="pairs">${"<span>🔴</span><span>🔵</span>".repeat(3)}<span>🔴</span></div>`, "7 has one left over. 7 is odd."),
+      T.show(`<div class="bignum">0 2 4 6 8</div>`, "Even numbers end in 0, 2, 4, 6, or 8. Odd numbers end in 1, 3, 5, 7, or 9.")] },
+    { id: "9c", s: "read", t: "Vowel teams: ai, ee, oa", p: { g: "words", lv: 1, only: ["vowel", "team"] }, slides: () => [
+      T.show(`<div class="flagbig">🌧️</div><div class="bigtext">r<u>ai</u>n</div>`, "When a and i are together, they say the name of A: rain."),
+      T.show(`<div class="flagbig">🐝</div><div class="bigtext">b<u>ee</u></div>`, "Two e's together say the name of E: bee."),
+      T.show(`<div class="flagbig">⛵</div><div class="bigtext">b<u>oa</u>t</div>`, "O and a together say the name of O: boat.")] },
+    { id: "9d", s: "world", t: "Maps and directions", p: { g: "facts", lv: 1, only: ["q", "grid"], opts: { set: "maps" } }, slides: () => [
+      T.show(`<div class="flagbig">🧭</div>`, "A compass rose shows the directions: north, south, east, and west. On most maps, north is up."),
+      T.show(`<div class="mapgrid"><span class="nlab">N ⬆</span>${MAPGRID.map((e) => `<span>${e}</span>`).join("")}</div>`, "The playground is in the middle. The tree is north of it, the hospital is south, the water is east, and the store is west."),
+      T.show(`<div class="flagbig">🗺️</div>`, "A map key tells you what the little pictures on the map mean."),
+      T.show(`<div class="flagbig">🌅</div>`, "The sun rises in the east and sets in the west.")] },
+  ] },
+  { n: 10, em: "🎪", name: "Circus Town", lessons: [
+    { id: "10a", s: "math", t: "Adding to 100", p: { g: "arith", lv: 1, only: ["add2"] }, slides: () => [
+      T.show(`<div class="eq">34 + 25 = ?</div>`, "Add the tens: 30 + 20 = 50. Add the ones: 4 + 5 = 9. 50 + 9 = 59!"),
+      T.show(`<div class="eq">38 + 25 = ?</div>`, "30 + 20 = 50. 8 + 5 = 13. 50 + 13 = 63!")] },
+    { id: "10b", s: "math", t: "Taking away to 100", p: { g: "arith", lv: 2, only: ["sub2"] }, slides: () => [
+      T.show(`<div class="eq">57 − 23 = ?</div>`, "Take away the tens: 57 − 20 = 37. Then the ones: 37 − 3 = 34."),
+      T.show(`<div class="eq">34 + 23 = 57</div>`, "Check by adding back: 34 + 23 = 57. It works!")] },
+    { id: "10c", s: "math", t: "Dollars and cents", p: { g: "money", lv: 2, only: ["count", "notation"] }, slides: () => [
+      T.show(billSvg(1), "This is a one-dollar bill. One dollar is 100 cents."), T.show(moneyPic([1], ["q", "d"]), "1 dollar and 35 cents. We write it $1.35."),
+      T.show(moneyPic([5, 1], ["q"]), "Count the bills first: 5, 6 dollars. Then the coins: 25 cents. $6.25!")] },
+    { id: "10d", s: "read", t: "Reading short stories", p: { g: "words", lv: 2, only: ["read"] }, slides: () => [
+      T.show(`<div class="passage"><b>${PASSAGES[0].title}</b><br>${PASSAGES[0].text}</div>`, "Read the story. Then answer questions about it. You can look back at the story!"),
+      T.show(`<div class="passage">${PASSAGES[0].text}</div>`, "What color is Max's ball? Look back: it says red!")] },
+  ] },
+  { n: 11, em: "🌋", name: "Volcano Island", lessons: [
+    { id: "11a", s: "math", t: "Time to 5 minutes", p: { g: "clock", lv: 5 }, slides: () => [
+      T.show(clockSvg(4, 25), "Count by 5s for the long hand: 5, 10, 15, 20, 25. It's 4:25."), T.show(clockSvg(10, 50), "The long hand is on 10: that's 50 minutes. It's 10:50.")] },
+    { id: "11b", s: "math", t: "Bar graphs", p: { g: "graph", lv: 2 }, slides: () => [
+      T.show(barGraph([["🍎", "apples", 5], ["🍌", "bananas", 3], ["🍇", "grapes", 7]], 1), "A bar graph shows how many. The grapes bar is the tallest: 7."),
+      T.show(barGraph([["🍎", "apples", 5], ["🍌", "bananas", 3], ["🍇", "grapes", 7]], 1), "How many more apples than bananas? 5 − 3 = 2.")] },
+    { id: "11c", s: "math", t: "Measuring length", p: { g: "measure", lv: 1, only: ["ruler"] }, slides: () => [
+      T.show(rulerPic(4, "🖍️"), "Line it up at 0. The crayon ends at 4. It's 4 inches long!"), T.show(rulerPic(2, "🐛"), "The worm goes from 0 to 2: 2 inches.")] },
+    { id: "11d", s: "world", t: "Land and water", p: { g: "facts", lv: 1, opts: { set: "land" } }, slides: () => [
+      T.show(`<div class="flagbig">🏝️</div>`, "An island is land with water all around it."), T.show(`<div class="flagbig">⛰️🌋</div>`, "Mountains are very tall land. A volcano is a mountain that can erupt with hot lava."),
+      T.show(`<div class="flagbig">🏞️🌊</div>`, "A lake has land all around it. A river flows across the land to the sea."), T.show(`<div class="flagbig">🏜️</div>`, "A desert is a very dry place with little rain.")] },
+  ] },
+  { n: 12, em: "🏰", name: "Castle Hill", lessons: [
+    { id: "12a", s: "math", t: "Times tables: 2, 5, 10", p: { g: "arith", lv: 3, only: ["mult", "array"], opts: { tables: [2, 5, 10] } }, slides: () => [
+      T.show(`<div class="arr" style="--c:5">${"<span>🍪</span>".repeat(10)}</div>`, "2 rows of 5 cookies. 2 times 5 is 10. Times means groups of!"),
+      T.show(`<div class="bignum">5 10 15 20 25</div>`, "5 × 1 = 5, 5 × 2 = 10, 5 × 3 = 15. It's just counting by 5s!"), T.show(`<div class="eq">10 × 4 = 40</div>`, "Times 10: add a zero. 10 × 4 = 40.")] },
+    { id: "12b", s: "math", t: "Sharing and dividing", p: { g: "arith", lv: 3, only: ["div"], opts: { tables: [2, 3, 4, 5] } }, slides: () => [
+      T.show(`<div class="arr" style="--c:4">${"<span>🍓</span>".repeat(12)}</div>`, "12 strawberries shared by 3 friends: each gets 4. 12 ÷ 3 = 4."),
+      T.show(`<div class="eq">3 × 4 = 12</div>`, "Dividing undoes times: 3 × 4 = 12, so 12 ÷ 3 = 4.")] },
+    { id: "12c", s: "read", t: "The main idea", p: { g: "words", lv: 4, only: ["main"] }, slides: () => [
+      T.show(`<div class="passage"><b>${PASSAGES[3].title}</b><br>${PASSAGES[3].text}</div>`, "The main idea is what the whole story is mostly about."),
+      T.show(`<div class="passage">${PASSAGES[3].text}</div>`, "This one is mostly about how bees make honey. Not just one detail, the big idea!")] },
+    { id: "12d", s: "world", t: "Europe's capitals", p: { g: "flags", lv: 5, only: ["capital"], opts: { cont: "Europe" } }, data: "flags", slides: () => [
+      ...[["GB", "London is the capital of the United Kingdom."], ["DE", "Berlin is the capital of Germany."], ["ES", "Madrid is the capital of Spain."], ["IT", "Rome is the capital of Italy."]]
+        .map(([iso, t]) => T.show(`<div class="flagbig">${flag(iso)}</div>`, t))] },
+  ] },
+  { n: 13, em: "🐉", name: "Dragon Cave", lessons: [
+    { id: "13a", s: "math", t: "Fractions", p: { g: "frac", lv: 1, only: ["name"] }, slides: () => [
+      T.show(fracPic(1, 2, "pie"), "Cut a pizza into 2 equal parts. One part is one half: 1/2."),
+      T.show(fracPic(1, 4, "pie"), "4 equal parts. One part is one fourth: 1/4."), T.show(fracPic(3, 4, "bar"), "3 of 4 parts are shaded: three fourths. The bottom number tells how many parts in all.")] },
+    { id: "13b", s: "math", t: "Times tables: 3, 4, 6", p: { g: "arith", lv: 3, only: ["mult", "array"], opts: { tables: [3, 4, 6] } }, slides: () => [
+      T.show(`<div class="arr" style="--c:4">${"<span>⭐</span>".repeat(12)}</div>`, "3 rows of 4 stars. 3 × 4 = 12."), T.show(`<div class="eq">6 × 3 = 18</div>`, "6 × 3 is the same as 3 × 6. Both are 18!")] },
+    { id: "13c", s: "read", t: "Nouns, verbs, adjectives", p: { g: "words", lv: 3, only: ["noun"] }, slides: () => [
+      T.show(`<div class="passage">The happy <u>dog</u> runs fast.</div>`, "A noun is a person, place, or thing. Dog is a noun."),
+      T.show(`<div class="passage">The happy dog <u>runs</u> fast.</div>`, "A verb is an action word. Runs is the verb."),
+      T.show(`<div class="passage">The <u>happy</u> dog runs fast.</div>`, "An adjective describes something. Happy describes the dog.")] },
+    { id: "13d", s: "world", t: "The solar system", p: { g: "facts", lv: 1, opts: { set: "solar" } }, slides: () => [
+      T.show(`<div class="flagbig">☀️</div>`, "The Sun is a star. 8 planets travel around it."),
+      T.show(`<div class="flagbig">☀️ 🌍 🔴 🪐</div>`, "In order from the Sun: Mercury, Venus, Earth, Mars, then Jupiter, Saturn, Uranus, and Neptune."),
+      T.show(`<div class="flagbig">🪐</div>`, "Jupiter is the biggest planet. Saturn has big, bright rings."), T.show(`<div class="flagbig">🔴</div>`, "Mars is called the Red Planet. Venus is the hottest planet.")] },
+  ] },
+  { n: 14, em: "🌌", name: "Star Sky", lessons: [
+    { id: "14a", s: "math", t: "Area and perimeter", p: { g: "measure", lv: 3, only: ["area", "perimeter"] }, slides: () => [
+      T.show(gridRect(4, 3), "Area is how many squares cover it. 4 × 3 = 12 squares."), T.show(gridRect(4, 3), "Perimeter is the distance around: 4 + 3 + 4 + 3 = 14.")] },
+    { id: "14b", s: "math", t: "Rounding", p: { g: "numbers", lv: 3, only: ["round"] }, slides: () => [
+      T.show(`<div class="nline"><b>40</b><b class="q">47</b><b>50</b></div>`, "47 is closer to 50 than to 40. 47 rounds to 50."),
+      T.show(`<div class="bigtext">43 → 40</div>`, "Look at the ones digit. 0 to 4 rounds down. 5 to 9 rounds up!")] },
+    { id: "14c", s: "read", t: "Same and opposite words", p: { g: "words", lv: 3, only: ["syn", "ant"] }, slides: () => [
+      T.show(`<div class="bigtext">big = large</div>`, "Synonyms mean the same thing, like big and large."), T.show(`<div class="bigtext">hot ↔ cold</div>`, "Antonyms are opposites, like hot and cold.")] },
+    { id: "14d", s: "world", t: "World flags", p: { g: "flags", lv: 5, only: ["name", "capital"] }, data: "flags", slides: () => [
+      T.show(flagRow(["BR", "IN", "ZA", "KR"]), "Every flag tells a story. Brazil's flag shows the night sky, and India's has a wheel in the middle."),
+      T.show(flagRow(["CA", "JP", "KE", "AU"]), "Look for clues: a leaf, a red sun, a shield, the Southern Cross stars.")] },
+  ] },
+  { n: 15, em: "🌴", name: "Jungle River", lessons: [
+    { id: "15a", s: "math", t: "Big multiplying", p: { g: "arith", lv: 4, only: ["mult2"] }, slides: () => [
+      T.show(`<div class="eq">23 × 4 = ?</div>`, "Break it up! 20 × 4 = 80, and 3 × 4 = 12. 80 + 12 = 92."), T.show(`<div class="eq">45 × 3 = ?</div>`, "40 × 3 = 120, 5 × 3 = 15. 120 + 15 = 135!")] },
+    { id: "15b", s: "math", t: "Long division", p: { g: "arith", lv: 4, only: ["longdiv"] }, slides: () => [
+      T.show(`<div class="eq">84 ÷ 4 = ?</div>`, "84 is 80 and 4. 80 ÷ 4 = 20, and 4 ÷ 4 = 1. So 84 ÷ 4 = 21."), T.show(`<div class="eq">21 × 4 = 84</div>`, "Check with times: 21 × 4 = 84. Yes!")] },
+    { id: "15c", s: "read", t: "Prefixes and suffixes", p: { g: "words", lv: 4, only: ["prefix"] }, slides: () => [
+      T.show(`<div class="bigtext"><u>un</u>happy</div>`, "Un at the start means not. Unhappy means not happy."), T.show(`<div class="bigtext"><u>re</u>do</div>`, "Re means again. Redo means do again."),
+      T.show(`<div class="bigtext">help<u>ful</u> · care<u>less</u></div>`, "Ful means full of. Less means without. Helpful means full of help. Careless means without care.")] },
+    { id: "15d", s: "world", t: "Food chains", p: { g: "facts", lv: 1, opts: { set: "food" } }, slides: () => [
+      T.show(`<div class="flagbig">☀️ → 🌱 → 🐰 → 🦊</div>`, "A food chain: the Sun helps grass grow, a rabbit eats the grass, and a fox eats the rabbit."),
+      T.show(`<div class="flagbig">🐰 🦁 🐻</div>`, "Herbivores eat plants. Carnivores eat meat. Omnivores eat both."), T.show(`<div class="flagbig">🍄🪱</div>`, "Decomposers like mushrooms and worms break down dead plants and animals.")] },
+  ] },
+  { n: 16, em: "🐋", name: "Deep Sea", lessons: [
+    { id: "16a", s: "math", t: "Equal fractions", p: { g: "frac", lv: 3, only: ["equiv"] }, slides: () => [
+      T.show(`<div class="two">${fracPic(1, 2, "bar")}${fracPic(2, 4, "bar")}</div>`, "1/2 and 2/4 cover the same amount. They're equal!"),
+      T.show(`<div class="eq">${fr(1, 3)} = ${fr(2, 6)}</div>`, "Multiply the top and bottom by the same number: 1/3 = 2/6.")] },
+    { id: "16b", s: "math", t: "Adding fractions", p: { g: "frac", lv: 3, only: ["add", "compare"] }, slides: () => [
+      T.show(`<div class="eq">${fr(2, 8)} + ${fr(3, 8)} = ${fr(5, 8)}</div>`, "Same bottom number? Add the tops and keep the bottom: 2/8 + 3/8 = 5/8."),
+      T.show(`<div class="two">${fracPic(3, 8, "bar")}${fracPic(5, 8, "bar")}</div>`, "Same size parts: 5/8 is bigger than 3/8.")] },
+    { id: "16c", s: "read", t: "Reading and thinking", p: { g: "words", lv: 5, only: ["main", "read"] }, slides: () => [
+      T.show(`<div class="passage"><b>${PASSAGES[5].title}</b><br>${PASSAGES[5].text}</div>`, "Read carefully. Some questions ask about details. Some ask what the story is mostly about.")] },
+    { id: "16d", s: "world", t: "Ocean life", p: { g: "facts", lv: 1, opts: { set: "ocean" } }, slides: () => [
+      T.show(`<div class="flagbig">🐋</div>`, "The blue whale is the biggest animal ever. Whales are mammals, so they breathe air!"),
+      T.show(`<div class="flagbig">🐟</div>`, "Fish breathe underwater with gills."), T.show(`<div class="flagbig">🐙🪸</div>`, "An octopus has 8 arms. Coral reefs are built by tiny animals called coral.")] },
+  ] },
+  { n: 17, em: "🗻", name: "Mountain Top", lessons: [
+    { id: "17a", s: "math", t: "Decimals", p: { g: "frac", lv: 4, only: ["dec", "deccompare"] }, slides: () => [
+      T.show(fracPic(3, 10, "bar"), "3 tenths. We write it 0.3."), T.show(`<div class="bigtext">0.25</div>`, "0.25 is 25 hundredths, like 25 cents out of a dollar."),
+      T.show(`<div class="bigtext">0.5 &gt; 0.45</div>`, "0.5 is the same as 0.50. 50 hundredths is more than 45.")] },
+    { id: "17b", s: "math", t: "Angles", p: { g: "measure", lv: 4, only: ["angle"] }, slides: () => [
+      T.show(anglePic(90), "A right angle is a square corner, like the corner of a book."), T.show(anglePic(40), "An acute angle is smaller than a right angle."),
+      T.show(anglePic(140), "An obtuse angle is bigger than a right angle.")] },
+    { id: "17c", s: "math", t: "Numbers to 10,000", p: { g: "numbers", lv: 4, only: ["place", "compare"] }, slides: () => [
+      T.show(`<div class="bigtext"><u>4</u>,582</div>`, "In 4,582, the 4 is in the thousands place. It means 4,000."),
+      T.show(`<div class="bigtext">3,950 &lt; 4,100</div>`, "To compare, look at the biggest place first: 3 thousands is less than 4 thousands.")] },
+    { id: "17d", s: "world", t: "Latitude and longitude", p: { g: "facts", lv: 1, opts: { set: "earth" } }, data: "continents", slides: () => [
+      T.show(contMap({ all: true }), "The equator is an imaginary line around the middle of the Earth. It splits Earth into the northern and southern hemispheres."),
+      T.show(`<div class="flagbig">🌐</div>`, "Lines of latitude go east and west. Lines of longitude go from pole to pole."),
+      T.show(`<div class="flagbig">☀️🧊</div>`, "Places near the equator are usually warm. Places near the poles are cold.")] },
+  ] },
+  { n: 18, em: "🛰️", name: "Space Station", lessons: [
+    { id: "18a", s: "math", t: "Fractions of a number", p: { g: "frac", lv: 5, only: ["mult"] }, slides: () => [
+      T.show(`<div class="eq">${fr(1, 3)} × 12 = 4</div>`, "One third of 12: split 12 into 3 equal groups. Each group has 4."),
+      T.show(`<div class="arr" style="--c:4">${"<span>🍬</span>".repeat(12)}</div>`, "3 rows of 4 candies. One row is one third: 4 candies.")] },
+    { id: "18b", s: "math", t: "Adding decimals", p: { g: "frac", lv: 5, only: ["decadd"] }, slides: () => [
+      T.show(`<div class="eq">0.45 + 0.30 = 0.75</div>`, "Line up the decimal points, then add like money: 45 cents + 30 cents = 75 cents."),
+      T.show(`<div class="eq">0.60 + 0.55 = 1.15</div>`, "60 cents + 55 cents is 115 cents: one dollar and 15 cents, or 1.15.")] },
+    { id: "18c", s: "read", t: "Stories and questions", p: { g: "words", lv: 5, only: ["read", "main"] }, slides: () => [
+      T.show(`<div class="passage"><b>${PASSAGES[7].title}</b><br>${PASSAGES[7].text}</div>`, "Good readers look back at the story to find answers.")] },
+    { id: "18d", s: "world", t: "World capitals", p: { g: "countries", lv: 5, only: ["capital"] }, data: "countries", slides: () => [
+      ...[["CN", "Beijing is the capital of China."], ["IN", "New Delhi is the capital of India."], ["BR", "Brasília is the capital of Brazil."], ["AU", "Canberra is the capital of Australia, not Sydney!"]]
+        .map(([iso, t]) => T.show(`<div class="flagbig">${flag(iso)}</div>`, t))] },
+  ] },
+  { n: 19, em: "🪐", name: "Planet Rings", lessons: [
+    { id: "19a", s: "math", t: "Volume", p: { g: "measure", lv: 5, only: ["volume"] }, slides: () => [
+      T.show(layersPic(3, 2, 2), "Volume is how many cubes fill a box. Each layer has 3 × 2 = 6 cubes. 2 layers: 12 cubes."),
+      T.show(`<div class="eq">3 × 2 × 2 = 12</div>`, "Length × width × height = volume.")] },
+    { id: "19b", s: "math", t: "Graphing points", p: { g: "coord", lv: 1 }, slides: () => [
+      T.show(coordPic(3, 2), "To find a point, go across first, then up. 3 across, 2 up: (3, 2)."),
+      T.show(coordPic(1, 4), "1 across, 4 up: (1, 4). The first number is always across!")] },
+    { id: "19c", s: "math", t: "Making change", p: { g: "money", lv: 4, only: ["change"] }, slides: () => [
+      T.show(`<div class="flagbig">🍪</div>`, "A cookie costs 65 cents. You pay 1 dollar. Count up from 65: 70, 75, 100. Your change is 35 cents!"),
+      T.show(`<div class="eq">$1.00 − $0.65 = $0.35</div>`, "Change = what you paid − what it costs.")] },
+    { id: "19d", s: "world", t: "The human body", p: { g: "facts", lv: 1, opts: { set: "body" } }, slides: () => [
+      T.show(`<div class="flagbig">❤️🫁</div>`, "Your heart pumps blood all around your body. Your lungs breathe in air."),
+      T.show(`<div class="flagbig">🧠💀</div>`, "Your brain helps you think. Your skull protects it."), T.show(`<div class="flagbig">🦴</div>`, "A grown-up has 206 bones. Your skin is your biggest organ!")] },
+  ] },
+  { n: 20, em: "👑", name: "Crown Castle", lessons: [
+    { id: "20a", s: "math", t: "Order of operations", p: { g: "arith", lv: 5, only: ["ops"] }, slides: () => [
+      T.show(`<div class="eq">2 + 3 × 4 = 14</div>`, "Times and divide come before plus and minus. 3 × 4 = 12, then 2 + 12 = 14."),
+      T.show(`<div class="eq">(2 + 3) × 4 = 20</div>`, "Parentheses go first! 2 + 3 = 5, then 5 × 4 = 20.")] },
+    { id: "20b", s: "math", t: "Math review", p: [{ g: "arith", lv: 4, only: ["mult2"] }, { g: "frac", lv: 3, only: ["add"] }, { g: "numbers", lv: 4, only: ["round"] }, { g: "money", lv: 4, only: ["change"] }, { g: "measure", lv: 3, only: ["area"] }],
+      slides: () => [T.show(`<div class="flagbig">🧮</div>`, "The big math review! Multiplying, fractions, rounding, money, and area. You know all of these!")] },
+    { id: "20c", s: "read", t: "Reading review", p: { g: "words", lv: 5 }, slides: () => [T.show(`<div class="flagbig">📚</div>`, "The big reading review: stories, main ideas, word parts, and parts of speech!")] },
+    { id: "20d", s: "world", t: "World review", p: [{ g: "countries", lv: 5, only: ["capital"] }, { g: "facts", lv: 1, opts: { set: "earth" } }, { g: "facts", lv: 1, opts: { set: "solar" } }, { g: "flags", lv: 5, only: ["name"] }], data: "countries",
+      slides: () => [T.show(`<div class="flagbig">🌍🪐</div>`, "The big world review: countries, capitals, flags, Earth, and space. Then you earn the crown!")] },
+  ] },
 ];
 const gradeOf = (n) => GRADES.findIndex((g) => n <= g.last);
 function lessonById(id) {
@@ -1540,6 +2093,13 @@ const TOPICS = [
   { id: "count", game: "count", ico: "🍎", name: "Counting", lessons: ["1a", "2a", "3b", "5a", "6a", "8a"] },
   { id: "add", game: "add", ico: "➕", name: "Adding and taking away", lessons: ["3a", "4a", "5b", "7a"] },
   { id: "shapes", game: "shapes", ico: "🔷", name: "Shapes and patterns", lessons: ["1b", "2b", "8c"] },
+  { id: "numbers", game: "numbers", ico: "🔢", name: "Big numbers", lessons: ["6a", "9a", "9b", "14b", "17c"] },
+  { id: "arith", game: "arith", ico: "✖️", name: "Add, subtract, times, divide", lessons: ["10a", "10b", "12a", "12b", "13b", "15a", "15b", "20a"] },
+  { id: "fractions", game: "frac", ico: "🍕", name: "Fractions and decimals", lessons: ["13a", "16a", "16b", "17a", "18a", "18b"] },
+  { id: "money", game: "money", ico: "💵", name: "Dollars and cents", lessons: ["10c", "19c"] },
+  { id: "measure", game: "measure", ico: "📏", name: "Measuring, graphs, and grids", lessons: ["11c", "11b", "14a", "17b", "19a", "19b"] },
+  { id: "words", game: "words", ico: "📖", name: "Reading and grammar", lessons: ["9c", "10d", "12c", "13c", "14c", "15c", "16c", "18c"] },
+  { id: "science", game: "facts", ico: "🔬", name: "Science and Earth", lessons: ["9d", "11d", "13d", "15d", "16d", "17d", "19d"] },
 ];
 // Adventure lessons that are also covered by library lessons: passing those (4 of 5) counts as doing the Adventure lesson.
 const LIB = { "1d": ["states.1"], "4b": ["coins.1", "coins.2"], "4d": ["flags.1"], "5d": ["states.3", "states.4", "states.5", "states.6"], "6b": ["time.2"],
@@ -1561,7 +2121,7 @@ async function placeBlock() {
   try { await Promise.all(L.lessons.map(needData)); } catch { toast("That didn’t load. Check the internet."); S.view = "home"; render(); return; }
   const picks = ["math", "read", "world"].map((s) => pick(L.lessons.filter((x) => x.s === s))).filter(Boolean);
   while (picks.length < 3) picks.push(pick(L.lessons.filter((x) => !picks.includes(x))));
-  r.games.push(...picks.map((x) => x.p));
+  r.games.push(...picks.map((x) => specOf(x.p)));
   r.i = r.games.length - picks.length;
   await nextQuestion();
 }
@@ -1677,8 +2237,10 @@ function finishRound() {
 }
 
 // ---------- adventure: lesson flow ----------
+// A lesson's practice spec is one { g, lv, only, opts } or a list of them (review lessons mix several).
+const specOf = (p) => (Array.isArray(p) ? pick(p) : p);
 async function needData(ls) {
-  await Promise.all([ensureData(ls.p.g), ls.data ? ensureData(ls.data) : null, ls.s === "read" ? ensureData("sounds") : null]);
+  await Promise.all([...[].concat(ls.p).map((p) => ensureData(p.g)), ls.data ? ensureData(ls.data) : null, ls.s === "read" ? ensureData("sounds") : null]);
 }
 async function openLesson(id) {
   const [L, ls] = lessonById(id);
@@ -1698,7 +2260,7 @@ async function startLessonRound(id) {
   const [L, ls] = lessonById(id);
   try { await needData(ls); } catch { toast("That didn’t load. Check the internet."); return; }
   if (L) S.level = L.n;
-  S.round = { mode: "lesson", lesson: id, lv: L ? L.n : null, games: Array(LESSON_Q).fill(ls.p), i: 0, results: [], seen: new Set(), before: tally().earned };
+  S.round = { mode: "lesson", lesson: id, lv: L ? L.n : null, games: Array.isArray(ls.p) ? shuffle(Array.from({ length: LESSON_Q }, (_, i) => ls.p[i % ls.p.length])) : Array(LESSON_Q).fill(ls.p), i: 0, results: [], seen: new Set(), before: tally().earned };
   S.view = "play";
   await nextQuestion();
 }
@@ -1706,7 +2268,7 @@ async function startLessonRound(id) {
 async function startBoss(n) {
   const L = LEVELS[n - 1];
   try { await Promise.all(L.lessons.map(needData)); } catch { toast("That didn’t load. Check the internet."); return; }
-  const specs = shuffle([...L.lessons, ...L.lessons].map((x) => x.p)).slice(0, BOSS_Q);
+  const specs = shuffle([...L.lessons, ...L.lessons].map((x) => specOf(x.p))).slice(0, BOSS_Q);
   S.level = n;
   S.round = { mode: "boss", lesson: "c" + n, boss: true, lv: n, games: specs, i: 0, results: [], seen: new Set(), before: tally().earned };
   S.view = "play";

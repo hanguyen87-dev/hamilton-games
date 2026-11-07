@@ -69,7 +69,7 @@ Same as SAT Daily Ten, no framework, no build step: `index.html` (the whole app)
 - Saving: answers are sent in batches (end of a round, app hidden, 8 waiting, or after a minute) as `PUT /api/db {writes:[...]}`, to stay far under the Blob plan's 2,000 writes a month.
 
 ## Adventure (home screen)
-- A winding map of 20 levels, Kindergarten to 5th grade, with a prize at the end of each grade (🏅 K, 🏆 1st, 💎 2nd, 🚀 3rd, 🌟 4th, 👑 5th). Levels 1-8 (Kindergarten and 1st grade) are built; 9-20 show as "coming soon".
+- A winding map of 20 levels, Kindergarten to 5th grade, with a prize at the end of each grade (🏅 K, 🏆 1st, 💎 2nd, 🚀 3rd, 🌟 4th, 👑 5th). All 20 levels are built (Kindergarten to 5th grade, 80 lessons).
 - Each level has 4 lessons (math, reading, world). A lesson = a few narrated slides to tap through (some are tap-to-count), then 5 practice questions. The level challenge (5 of 6 right on the first try) finishes a level fast.
 - Topic order follows free, trusted curricula: Common Core K-5 math, the UFLI Foundations / CKLA phonics order, and the Core Knowledge Sequence for geography. The lesson text is written for this app.
 - Content lives in `LEVELS` in index.html; new question makers: shapes, pattern, continents, oceans, tens. Progress: `lessons` collection (one doc per lesson id like "3b", "c3" for a passed challenge).
@@ -81,3 +81,8 @@ Same as SAT Daily Ten, no framework, no build step: `index.html` (the whole app)
 - Facts from public sources: U.S. Mint (coins and who is on them; last circulating penny struck Nov 12, 2025, pennies still legal tender), U.S. Census Bureau (the 4 regions), CIA World Factbook (countries, capitals). Topic order follows Common Core and the Core Knowledge Sequence.
 - A library lesson passed with 4 of 5 right on the first try counts for the Adventure: `LIB` maps each Adventure lesson to the library lessons that cover it.
 - Placement quiz ("Find my level!" on the map, and in Grown-ups): 3 questions per level (math, reading, world) from Level 3; 2 of 3 = passed, go up; the first miss stops it (or steps down until a level passes). Saved as lessons/place {lv}; levels up to lv count as done. It only moves him up.
+
+## Grades 2 to 5 (Levels 9-20)
+- New question makers: numbers (place value, even/odd, compare, rounding), arith (2-digit add/subtract, times tables with arrays, division, 2-digit x 1-digit, long division, order of operations), money (bills and coins, $ notation, making change), graph (bar graphs), measure (ruler, area, perimeter, angles, volume), frac (fractions, equal fractions, compare, add, fraction of a number, decimals), coord (grid points), words (vowel teams, short stories written for the app, main idea, nouns/verbs/adjectives, synonyms/antonyms, prefixes/suffixes), facts (maps, landforms, solar system, food chains, ocean life, latitude/longitude, the human body).
+- Review lessons can mix several question makers: a lesson's p may be a list of specs.
+- Library topics added for these: Big numbers, Add/subtract/times/divide, Fractions and decimals, Dollars and cents, Measuring/graphs/grids, Reading and grammar, Science and Earth.
