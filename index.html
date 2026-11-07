@@ -675,6 +675,8 @@ async function speak(items, delay = 0, force = false, mood = "") {
 // ---------- reading ----------
 const R = () => GEO.reading;
 const soundOf = (k) => R().sounds.find((x) => x.k === k);
+// How a sound is written on screen: one letter between slashes, the way teachers write it (/m/, not /mmm/). c says /k/.
+const slash = (k) => "/" + ({ c: "k", x: "ks", qu: "kw" }[k] || k) + "/";
 const sameSound = (a, b) => soundOf(a).ipa === soundOf(b).ipa;  // c and k
 const DIGRAPHS = { sh: "sh", ch: "ch", th: "th", ck: "k", qu: "qu" };
 // A word as letter groups with their sounds (duck -> d, u, ck); null for sight words and spellings not taught.
@@ -915,13 +917,13 @@ const GEN = {
     if (type === "letter") {
       const x = pick(lv === 5 ? r.sounds.filter((y) => y.k.length === 2 || known.includes(y)).filter((y) => y.k !== "x") : known);
       const pool = lv === 5 ? r.sounds.filter((y) => y.k !== x.k && y.k !== "x" && !sameSound(y.k, x.k)) : notLike(x.k);
-      return { key: "l" + x.k, prompt: `Which letter says /${x.say}/?`, say: `Which letter says ${x.say}?`, clips: [letterQ(x.k)], pic: earBtn,
-        choices: letterCh(shuffle([x, ...sample(pool, 2)])), answer: x.k, after: `${x.k} says /${x.say}/.`, afterClips: [sndItem(x.k)] };
+      return { key: "l" + x.k, prompt: `Which letter says ${slash(x.k)}?`, say: `Which letter says ${x.say}?`, clips: [letterQ(x.k)], pic: earBtn,
+        choices: letterCh(shuffle([x, ...sample(pool, 2)])), answer: x.k, after: `${x.k} says ${slash(x.k)}.`, afterClips: [sndItem(x.k)] };
     }
     if (type === "first") {
       const x = pick(withPics), [w, em] = pick(x.pics);
       return { key: "f" + w, prompt: `What sound does ${w} start with?`, say: `What sound does ${w} start with?`, clips: [firstQ(w)], pic: `<div class="flagbig">${em}</div>`,
-        choices: letterCh(shuffle([x, ...sample(notLike(x.k), 2)])), answer: x.k, after: `${cap(w)} starts with /${x.say}/.`, afterClips: [firstA(w, x.k)] };
+        choices: letterCh(shuffle([x, ...sample(notLike(x.k), 2)])), answer: x.k, after: `${cap(w)} starts with ${slash(x.k)}.`, afterClips: [firstA(w, x.k)] };
     }
     const fits = r.words.filter(([w]) => graphemes(w).every((g) => known.some((k) => k.k === g.k || sameSound(k.k, g.k))));
     const [w, em] = pick(fits.length >= 6 ? fits : r.words), gs = graphemes(w), near = lv >= 4;
@@ -1119,7 +1121,7 @@ const SUBJ = { math: "🔢", read: "🔤", world: "🌎" };
 const T = {
   show: (html, text, extra = {}) => ({ html, text, ...extra }),
   count: (em, n, many) => ({ html: `<div class="tcount">${Array.from({ length: n }, (_, i) => `<button class="tc" data-tc="${i}" aria-label="${many}">${em}</button>`).join("")}</div>`, text: `Tap each one and count!`, count: n, done: `${n} ${many}!` }),
-  sound: (k) => { const x = soundOf(k), up = k[0].toUpperCase() + k.slice(1); return { html: `<div class="bigletter">${up} ${k}</div><div class="slpics">${x.pics.slice(0, 3).map(([w, e]) => `<span>${e}<small>${w}</small></span>`).join("")}</div>`, text: `${k} says /${x.say}/`, clips: [sndItem(k, 0.5), ...x.pics.slice(0, 2).map(([w]) => ({ ...firstA(w, k), gap: 0.4 }))] }; },
+  sound: (k) => { const x = soundOf(k), up = k[0].toUpperCase() + k.slice(1); return { html: `<div class="bigletter">${up} ${k}</div><div class="slpics">${x.pics.slice(0, 3).map(([w, e]) => `<span>${e}<small>${w}</small></span>`).join("")}</div>`, text: `${k} says ${slash(k)}`, clips: [sndItem(k, 0.5), ...x.pics.slice(0, 2).map(([w]) => ({ ...firstA(w, k), gap: 0.4 }))] }; },
   blend: (w) => ({ html: `${tilesOf(w, false)}<div class="slpics"><span>${R().words.find((x) => x[0] === w)?.[1] || ""}</span></div>`, text: `${graphemes(w).map((g) => g.g).join("-")}… ${w}!`, clips: soundOut(w, 0.5) }),
   shape: (k, text) => ({ html: shapeSvg(k, 2), text }),
   cont: (name, text) => ({ html: contMap({ hl: name }), text }),
