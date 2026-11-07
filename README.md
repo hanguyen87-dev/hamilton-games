@@ -86,3 +86,7 @@ Same as SAT Daily Ten, no framework, no build step: `index.html` (the whole app)
 - New question makers: numbers (place value, even/odd, compare, rounding), arith (2-digit add/subtract, times tables with arrays, division, 2-digit x 1-digit, long division, order of operations), money (bills and coins, $ notation, making change), graph (bar graphs), measure (ruler, area, perimeter, angles, volume), frac (fractions, equal fractions, compare, add, fraction of a number, decimals), coord (grid points), words (vowel teams, short stories written for the app, main idea, nouns/verbs/adjectives, synonyms/antonyms, prefixes/suffixes), facts (maps, landforms, solar system, food chains, ocean life, latitude/longitude, the human body).
 - Review lessons can mix several question makers: a lesson's p may be a list of specs.
 - Library topics added for these: Big numbers, Add/subtract/times/divide, Fractions and decimals, Dollars and cents, Measuring/graphs/grids, Reading and grammar, Science and Earth.
+
+## Flashcards and maps
+- Games → 🃏 Flashcards and maps (also a Flashcards row inside matching topics). Decks in `DECKS`: 50 States, Countries, Continents and oceans (map decks: Explore = tap the map to flip its card; Flashcards = one lights up, guess, flip, "I knew it" / "Still learning"), plus Flags, Famous places, Coins, Letter sounds, Times tables, Shapes.
+- Known cards are saved per deck in the `cards` collection ({ known: [ids] }) and fill in green on the map. Each new known card = +1 star. "Still learning" brings the card back a few cards later.

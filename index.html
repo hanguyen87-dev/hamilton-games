@@ -288,6 +288,23 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
 .mapgrid { position: relative; display: grid; grid-template-columns: repeat(3, 64px); gap: 6px; font-size: 2.4rem; padding-top: 30px; }
 .mapgrid span { display: grid; place-items: center; background: var(--surface); border: 2px solid var(--line); border-radius: 12px; height: 64px; }
 .mapgrid .nlab { position: absolute; top: 0; left: 50%; transform: translateX(-50%); height: auto; border: 0; background: none; font-size: 1rem; font-weight: 800; color: var(--brand); }
+/* flashcards */
+.fhead { text-align: center; margin: 4px 0 10px; }
+.fhead h2 { margin: 0; font-size: 1.5rem; }
+.fhead p { margin: 2px 0 8px; color: var(--muted); font-weight: 700; }
+.seg { display: inline-flex; gap: 8px; }
+.map path.known { fill: var(--good); opacity: .75; }
+.fcard { display: grid; justify-items: center; align-content: center; gap: 6px; width: 100%; min-height: 150px; margin: 12px 0; padding: 16px; border-radius: 24px; border: 3px solid var(--line); background: var(--surface); box-shadow: var(--shadow); text-align: center; font: inherit; color: var(--ink); }
+button.fcard { cursor: pointer; }
+.fcard.back { border-color: var(--good); background: var(--good-bg); }
+.fcard .fq { font-size: clamp(1.3rem, 5.6vw, 1.6rem); font-weight: 800; }
+.fcard small { color: var(--muted); font-weight: 700; }
+.fcard .ctitle { font-size: clamp(1.8rem, 8vw, 2.4rem); font-weight: 800; line-height: 1.1; }
+.fcard span { font-size: 1.15rem; }
+.fcard.flipping { transform: scaleX(0); transition: transform .17s ease-in; }
+.fcard.flipin { animation: flipin .2s ease-out; }
+@keyframes flipin { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.fbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 /* trophy room */
 .shelf { background: var(--surface); border: 2px solid var(--line); border-radius: 20px; padding: 12px 14px; margin-bottom: 14px; box-shadow: var(--shadow); }
 .shelf h2 { margin: 0 0 8px; font-size: 1.15rem; }
@@ -403,7 +420,7 @@ function localLoad() {
 // Answers wait here and go to the server together (end of a round, app hidden, 8 waiting, or after a minute):
 // the free storage plan allows 2,000 writes a month for all the family's apps, so each answer can't be its own write.
 const queue = [];
-const BATCHED = new Set(["answers", "days", "lessons"]), BATCH_MAX = 60;
+const BATCHED = new Set(["answers", "days", "lessons", "cards"]), BATCH_MAX = 60;
 let flushing = false, flushTimer = null;
 function put(c, id, doc) {
   (S.data[c] ||= {})[id] = doc;
@@ -474,7 +491,7 @@ function tally() {
   for (const a of Object.values(S.data.answers || {})) if (a.ok) { right++; if (a.d === today) rightToday++; }
   earned += right * STAR_RIGHT;
   const adv = adventureStars();
-  earned += adv.stars;
+  earned += adv.stars + cardStars();
   const frozen = frozenDays(), first = [...done].sort()[0];
   let streak = 0, bonus = 0;
   if (first) for (let d = first; d <= today; d = addDay(d, 1)) {
@@ -612,7 +629,7 @@ async function ensureData(g) {
 function usMap(opt = {}) {
   const { w, h, states } = GEO.us;
   let s = `<svg class="map${opt.tap ? " tap" : ""}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Map of the United States">`;
-  states.forEach((st, i) => { s += `<path data-i="${i}" class="${i === opt.hl || (opt.hls && opt.hls.includes(i)) ? "hl" : ""}" d="${st.d}"/>`; });
+  states.forEach((st, i) => { s += `<path data-i="${i}" class="${i === opt.hl || (opt.hls && opt.hls.includes(i)) ? "hl" : opt.known && opt.known.includes(i) ? "known" : ""}" d="${st.d}"/>`; });
   if (opt.hl != null && states[opt.hl].area < 1500) { const [x, y] = states[opt.hl].c; s += `<circle class="ring" cx="${x}" cy="${y}" r="30"/>`; }
   return `<div class="mapbox">${s}</svg></div>`;
 }
@@ -631,7 +648,7 @@ function worldMap(opt = {}) {
   }
   const sw = (vb[2] / w * 1.1).toFixed(2);
   let s = `<svg class="map${opt.tap ? " tap" : ""}" viewBox="${vb.join(" ")}" role="img" aria-label="World map"><path class="land" style="stroke-width:${sw}" d="${land}"/>`;
-  countries.forEach((c, i) => { s += `<path data-i="${i}" style="stroke-width:${sw}" class="${i === opt.hl ? "hl" : ""}" d="${c.d}"/>`; });
+  countries.forEach((c, i) => { s += `<path data-i="${i}" style="stroke-width:${sw}" class="${i === opt.hl ? "hl" : opt.known && opt.known.includes(i) ? "known" : ""}" d="${c.d}"/>`; });
   if (opt.hl != null) { const c = countries[opt.hl], small = (c.b[2] - c.b[0]) < vb[2] * 0.06; if (small) s += `<circle class="ring" style="stroke-width:${sw * 3}" cx="${c.c[0]}" cy="${c.c[1]}" r="${(vb[2] * 0.045).toFixed(1)}"/>`; }
   return `<div class="mapbox">${s}</svg></div>`;
 }
@@ -1134,7 +1151,7 @@ const OCEAN_FACT = { Pacific: "The Pacific is the biggest and deepest ocean.", A
 function contMap(opt = {}) {
   const { w, h2, conts, neutral, oceans } = GEO.world;
   let s = `<svg class="map conts${opt.tap ? " tap" : ""}" viewBox="0 0 ${w} ${h2}" role="img" aria-label="World map"><path class="land" d="${neutral}"/>`;
-  conts.forEach((c, i) => { s += `<path data-i="${i}" class="${c.name === opt.hl ? "hl" : ""}" d="${c.d}"${opt.all ? ` style="fill:${CONT_COLORS[c.name]}"` : ""}/>`; });
+  conts.forEach((c, i) => { s += `<path data-i="${i}" class="${c.name === opt.hl ? "hl" : opt.known && opt.known.includes(i) ? "known" : ""}" d="${c.d}"${opt.all ? ` style="fill:${CONT_COLORS[c.name]}"` : ""}/>`; });
   if (opt.labels) conts.forEach((c) => { s += `<text class="lbl" x="${c.c[0]}" y="${c.c[1]}">${c.name}</text>`; });
   if (opt.oceans) for (const [k, [x, y]] of Object.entries(oceans)) s += `<text class="lbl sea" x="${x}" y="${y}">${k}</text>`;
   if (opt.star) { const [x, y] = oceans[opt.star]; s += `<text class="ostar" x="${x}" y="${y}">⭐</text>`; }
@@ -2111,6 +2128,108 @@ const passed = (id, data = S.data) => ((data.lessons || {})[id] || {}).n >= PASS
 const lsDone = (x, data = S.data) => !!(data.lessons || {})[x.id] || (!!LIB[x.id] && LIB[x.id].every((id) => passed(id, data)));
 const topicLessons = (t) => t.lessons.map((x) => (typeof x === "string" ? lessonById(x)[1] : x));
 
+
+// ---------- flashcards and map explorer ----------
+// Map decks: Explore (tap anything on the map to see its card) or Flashcards (one lights up; guess, flip, then "I knew it" or "Still learning").
+// Other decks are flip cards. Cards he knows are saved per deck in the "cards" collection; each new one is a star.
+const STAR_CARD = 1;
+const DECKS = {
+  states: { name: "50 States", ico: "🗺️", data: "states", map: "us", what: "state", items: () => GEO.us.states.map((st, i) => ({ id: st.abbr, i, front: "What state is this?",
+    title: st.name, lines: [`Capital: ${st.capital}`, st.nick, `Region: the ${REGION[st.abbr]}`], say: `${st.name}. The capital is ${st.capital}. ${st.nick}.` })) },
+  countries: { name: "Countries of the world", ico: "🌍", data: "countries", map: "world", what: "country", items: () => GEO.world.countries.map((c, i) => ({ id: c.iso, i, front: "What country is this?",
+    title: `${flag(c.iso)} ${c.name}`, lines: [`Capital: ${c.capital}`, `Continent: ${c.cont}`], say: `${The(c.name)}. The capital is ${c.capital}. It's in ${c.cont}.` })) },
+  conts: { name: "Continents and oceans", ico: "🌎", data: "continents", map: "conts", what: "continent", items: () => [
+    ...GEO.world.conts.map((c, i) => ({ id: c.name, i, front: "What continent is this?", title: c.name, lines: [CONT_FACT[c.name]], say: `${c.name}. ${CONT_FACT[c.name]}` })),
+    ...Object.keys(GEO.world.oceans).map((o) => ({ id: o, ocean: o, front: "Which ocean has the star?", title: `${o} Ocean`, lines: [OCEAN_FACT[o]], say: `The ${o} Ocean. ${OCEAN_FACT[o]}` }))] },
+  flags: { name: "Flags", ico: "🚩", data: "flags", items: () => GEO.world.countries.map((c) => ({ id: c.iso, pic: `<div class="flagbig">${flag(c.iso)}</div>`, front: "Whose flag is this?",
+    title: c.name, lines: [`Capital: ${c.capital}`, `Continent: ${c.cont}`], say: `The flag of ${the(c.name)}. The capital is ${c.capital}.` })) },
+  landmarks: { name: "Famous places", ico: "🗼", data: "countries", items: () => LANDMARKS.map(([em, place, iso]) => ({ id: clipId(place), pic: `<div class="flagbig">${em}</div>`, front: "Where is this famous place?",
+    title: cap(place), lines: [`${flag(iso)} ${GEO.world.countries.find((c) => c.iso === iso).name}`], say: `${cap(place)}, in ${the(GEO.world.countries.find((c) => c.iso === iso).name)}.` })) },
+  coins: { name: "Coins", ico: "🪙", items: () => ["p", "n", "d", "q"].map((k) => ({ id: k, pic: coinsPic([k], false, 2), front: "What coin is this?",
+    title: cap(COIN[k].name), lines: [`Worth ${cents(COIN[k].v)}`, `${FACE[k]} is on it`], say: `A ${COIN[k].name}. It's worth ${cents(COIN[k].v)}.` })) },
+  sounds: { name: "Letter sounds", ico: "🔤", data: "sounds", items: () => R().sounds.filter((x) => x.k !== "x").map((x) => ({ id: x.k, pic: `<div class="bigletter">${x.k}</div>`, front: "What sound does it make?",
+    title: `${x.k} says ${slash(x.k)}`, lines: [x.pics.map((p) => `${p[1]} ${p[0]}`).join("   ")], say: `${x.k} says ${x.say}`, clips: [sndItem(x.k, 0.5), ...(x.pics[0] ? [firstA(x.pics[0][0], x.k)] : [])] })) },
+  times: { name: "Times tables", ico: "✖️", items: () => { const out = []; for (let a = 2; a <= 10; a++) for (let b = a; b <= 10; b++) out.push({ id: `${a}x${b}`, pic: `<div class="eq">${a} × ${b}</div>`, front: "What is the answer?", title: `${a} × ${b} = ${a * b}`, lines: [], say: `${a} times ${b} is ${a * b}.` }); return out; } },
+  shapes: { name: "Shapes", ico: "🔷", items: () => Object.keys(SHAPES).map((k) => ({ id: k, pic: shapeSvg(k, 1.8), front: "What shape is this?", title: cap(k), lines: SHAPES[k].sides ? [`${SHAPES[k].sides} sides`] : [], say: `${cap(k)}.${SHAPES[k].sides ? ` It has ${SHAPES[k].sides} sides.` : ""}` })) },
+};
+const TOPIC_DECK = { states: "states", countries: "countries", world: "conts", flags: "flags", coins: "coins", sounds: "sounds", arith: "times", shapes: "shapes" };
+const knownOf = (deck, data = S.data) => new Set(((data.cards || {})[deck] || {}).known || []);
+const cardStars = (data = S.data) => Object.values(data.cards || {}).reduce((s, d) => s + ((d && d.known) || []).length, 0) * STAR_CARD;
+async function openFlash(deck, mode) {
+  const D = DECKS[deck];
+  try { if (D.data) await ensureData(D.data); } catch { toast("That didn’t load. Check the internet."); return; }
+  const items = D.items(), known = knownOf(deck), idx = items.map((_, i) => i);
+  const order = [...shuffle(idx.filter((i) => !known.has(items[i].id))), ...shuffle(idx.filter((i) => known.has(items[i].id)))];
+  S.flash = { deck, items, order, pos: 0, flipped: false, sel: null, mode: mode || (D.map ? "explore" : "cards") };
+  S.view = "flash"; S.round = null;
+  render();
+  flashPrompt();
+}
+function flashPrompt() {
+  const f = S.flash, D = DECKS[f.deck];
+  if (f.mode === "explore") say(`Tap any ${D.what} on the map!`, 150);
+  else if (f.pos < f.order.length) say(f.items[f.order[f.pos]].front, 150);
+}
+function flashSay(it) { if (it.clips) speak(it.clips); else say(it.say); }
+function flashMap(f, it) {
+  const D = DECKS[f.deck], known = knownOf(f.deck), explore = f.mode === "explore";
+  const kIdx = f.items.filter((x) => known.has(x.id) && x.i != null).map((x) => x.i);
+  const hl = explore ? (f.sel != null ? f.items[f.sel].i : null) : it && it.i;
+  if (D.map === "us") return usMap({ hl, tap: explore, known: kIdx });
+  if (D.map === "world") return worldMap({ hl, tap: explore, known: kIdx, zoom: !explore && hl != null });
+  const ocean = explore ? (f.sel != null && f.items[f.sel].ocean) : it && it.ocean;
+  return contMap({ hl: hl != null ? GEO.world.conts[hl].name : null, tap: explore, star: ocean || null, oceans: explore, known: kIdx });
+}
+const cardBack = (it) => `<b class="ctitle">${esc(it.title)}</b>${it.lines.map((l) => `<span>${esc(l)}</span>`).join("")}`;
+function flashView() {
+  const f = S.flash, D = DECKS[f.deck], known = knownOf(f.deck), explore = f.mode === "explore";
+  const head = `<section class="fhead"><h2>${D.ico} ${esc(D.name)}</h2><p>⭐ ${known.size} of ${f.items.length} known</p>
+    ${D.map ? `<div class="seg"><button class="mini${explore ? "" : " soft"}" data-fmode="explore">🗺️ Explore</button><button class="mini${explore ? " soft" : ""}" data-fmode="cards">🃏 Flashcards</button></div>` : ""}</section>`;
+  if (explore) {
+    const it = f.sel != null ? f.items[f.sel] : null;
+    return `${head}${flashMap(f, null)}<div class="fcard${it ? " back" : ""}" id="fcard">${it ? cardBack(it) : `<span class="fq">👆 Tap a ${D.what}!</span>`}</div>`;
+  }
+  if (f.pos >= f.order.length) {
+    return `${head}<section class="done"><span class="star">🎉</span><h1>All done!</h1><p>You know ${known.size} of ${f.items.length}.</p>
+      <div class="btns"><button class="btn" data-flash="${f.deck}" data-fm="cards">Go again 🔁</button><button class="btn soft" data-go="flashmenu">More flashcards 🃏</button></div></section>`;
+  }
+  const it = f.items[f.order[f.pos]];
+  return `${head}<p class="storytitle">Card ${f.pos + 1} of ${f.order.length}</p>
+    ${D.map ? flashMap(f, it) : ""}
+    <button class="fcard${f.flipped ? " back" : ""}" id="fcard" data-fflip="1" aria-label="Flip the card">${f.flipped ? cardBack(it) : `${it.pic || ""}<span class="fq">${esc(it.front)}</span><small>Tap to flip</small>`}</button>
+    ${f.flipped ? `<div class="fbtns"><button class="btn go" data-fknow="1">✅ I knew it</button><button class="btn soft" data-fknow="0">🔁 Still learning</button></div>` : ""}`;
+}
+function flashMenuView() {
+  return `<h2 style="margin-top:6px">🃏 Flashcards and maps</h2><p class="storytitle" style="text-align:left;margin-bottom:14px">Flip cards to learn. Every new card you know is a star!</p>
+  <div class="rows">${Object.entries(DECKS).map(([id, D]) => `<button class="row" data-flash="${id}"><span class="ico">${D.ico}</span><span class="txt"><b>${esc(D.name)}</b><small>${D.map ? "Map and flashcards" : "Flashcards"} · ${knownOf(id).size} known</small></span><span class="lv">Open ▶</span></button>`).join("")}</div>`;
+}
+function flipCard(after) {
+  const el = $("#fcard");
+  if (!el || matchMedia("(prefers-reduced-motion: reduce)").matches) { after(); return; }
+  el.classList.add("flipping");
+  setTimeout(() => { after(); const n = $("#fcard"); if (n) n.classList.add("flipin"); }, 170);
+}
+function flashTap(i) {
+  const f = S.flash, D = DECKS[f.deck];
+  const k = D.map === "conts" ? f.items.findIndex((x) => x.i === i && !x.ocean) : f.items.findIndex((x) => x.i === i);
+  if (k < 0) return;
+  f.sel = k;
+  flipCard(() => { render(); flashSay(f.items[k]); });
+}
+function flashKnow(knew) {
+  const f = S.flash, it = f.items[f.order[f.pos]], known = knownOf(f.deck);
+  if (knew && !known.has(it.id)) {
+    known.add(it.id);
+    put("cards", f.deck, { known: [...known], t: Date.now() });
+    sfx.good(); confetti(16); toast(`+${STAR_CARD} ⭐`);
+  }
+  if (!knew) f.order.splice(Math.min(f.order.length, f.pos + 4), 0, f.order[f.pos]);  // see it again soon
+  f.pos++; f.flipped = false;
+  render();
+  if (f.pos >= f.order.length) { flush(); sfx.win(); confetti(60); say(`All done! You know ${known.size} of ${f.items.length}.`, 300, "praise"); }
+  else flashPrompt();
+}
+
 // ---------- placement quiz ----------
 // 3 questions per level (math, reading, world), starting at Level 3. 2 of 3 right = that level is passed: go up; otherwise stop (or go down
 // until a level is passed). Passed levels count as done in the Adventure. It only ever moves him up.
@@ -2158,6 +2277,7 @@ function topicView() {
   const t = TOPICS.find((x) => x.id === S.topic), list = topicLessons(t), ls = S.data.lessons || {}, done = list.filter((x) => ls[x.id]).length;
   return `<section class="lvhead"><div class="lvem">${t.ico}</div><h1>${esc(t.name)}</h1><p>${done} of ${list.length} lessons done</p></section>
   <div class="rows">${list.map((x, i) => { const st = lessonStars(ls[x.id]); return `<button class="row" data-lesson="${x.id}"><span class="ico lnum">${i + 1}</span><span class="txt"><b>${esc(x.t)}</b><small>${ls[x.id] ? (passed(x.id) ? "Passed ✓" : "Done. Try for more stars!") : "Learn, then practice"}</small></span><span class="lv"><i>${st ? "★".repeat(st) + "☆".repeat(3 - st) : "☆☆☆"}</i>${st ? "Again ▶" : "Start ▶"}</span></button>`; }).join("")}</div>
+  ${TOPIC_DECK[t.id] ? `<button class="row" data-flash="${TOPIC_DECK[t.id]}" style="margin-bottom:12px"><span class="ico">🃏</span><span class="txt"><b>${DECKS[TOPIC_DECK[t.id]].map ? "Map and flashcards" : "Flashcards"}</b><small>Flip the cards to learn</small></span></button>` : ""}
   <button class="row boss" data-go="${t.game}"><span class="ico">🎮</span><span class="txt"><b>Play the ${esc(t.name.toLowerCase())} game</b><small>Every right answer is a star!</small></span></button>`;
 }
 
@@ -2350,6 +2470,7 @@ function mapView(t) {
 function gamesView() {
   const ls = S.data.lessons || {};
   return `<h2 style="margin-top:6px">🎮 Learn and play</h2><p class="storytitle" style="text-align:left;margin-bottom:14px">Pick a topic. 📘 Learn has lessons. 🎮 Play is the game. Every right answer is a star!</p>
+  <button class="row boss" data-go="flashmenu"><span class="ico">🃏</span><span class="txt"><b>Flashcards and maps</b><small>Tap the map, flip the cards: states, countries, flags, and more</small></span></button>
   <div class="rows">${TOPICS.map((t) => { const list = topicLessons(t), done = list.filter((x) => ls[x.id]).length; return `<div class="row topic"><span class="ico">${t.ico}</span><span class="txt"><b>${esc(t.name)}</b><small>${done} of ${list.length} lessons</small></span>
     <span class="tbtns"><button class="mini" data-topic="${t.id}">📘 Learn</button><button class="mini soft" data-go="${t.game}">🎮 Play</button></span></div>`; }).join("")}</div>`;
 }
@@ -2429,6 +2550,8 @@ function render() {
   else if (S.view === "levelup") app.innerHTML = levelUpView();
   else if (S.view === "topic") app.innerHTML = topicView();
   else if (S.view === "placed") app.innerHTML = placedView();
+  else if (S.view === "flash") app.innerHTML = flashView();
+  else if (S.view === "flashmenu") app.innerHTML = flashMenuView();
   else app.innerHTML = mapView(t);
   if (S.view === "play") renderDots();
   window.scrollTo(0, 0);
@@ -2477,7 +2600,7 @@ function rewardsView(t) {
   ${grants.map((g) => `<p class="note" style="margin:0 0 12px">💌 ${PARENT_NAME} gave you ${plural(g.stars, "special star", "special stars")}: ${esc(g.reason)}</p>`).join("")}
   <h2>Last 2 weeks</h2><div class="cal">${cal.join("")}</div>
   <h2>How to get stars</h2>
-  <div class="how"><div>✅ Every right answer: <b>+${STAR_RIGHT} star</b></div><div>⭐ Finish Today's 5: <b>+${TODAY_STARS} stars</b> (all right: <b>+${PERFECT_STARS} more</b>)</div><div>📘 Finish a lesson: <b>+${LESSON_STARS} stars</b></div><div>🗺️ Finish a level: <b>+${LEVEL_STARS} stars</b></div><div>🏆 Win a trophy: <b>+${TROPHY_STARS} stars</b> (the crown: <b>+${CROWN_STARS}</b>)</div><div>🔥 Every ${STREAK_EVERY} days in a row: <b>+${STREAK_STARS} stars</b></div></div>
+  <div class="how"><div>✅ Every right answer: <b>+${STAR_RIGHT} star</b></div><div>⭐ Finish Today's 5: <b>+${TODAY_STARS} stars</b> (all right: <b>+${PERFECT_STARS} more</b>)</div><div>📘 Finish a lesson: <b>+${LESSON_STARS} stars</b></div><div>🗺️ Finish a level: <b>+${LEVEL_STARS} stars</b></div><div>🏆 Win a trophy: <b>+${TROPHY_STARS} stars</b> (the crown: <b>+${CROWN_STARS}</b>)</div><div>🃏 Learn a new flashcard: <b>+${STAR_CARD} star</b></div><div>🔥 Every ${STREAK_EVERY} days in a row: <b>+${STREAK_STARS} stars</b></div></div>
   ${reqs.length ? `<h2>My prizes</h2><div class="rows">${reqs.map(([, x]) => { const it = SHOP.find((s) => s.id === x.item) || { em: "🎁", name: x.item }; return `<div class="row"><span class="ico">${it.em}</span><span class="txt"><b>${esc(it.name)}</b><small>${x.stars} ⭐</small></span><span class="tag${x.status === "delivered" ? " good" : ""}">${x.status === "delivered" ? `${PARENT_NAME} gave it! 🎉` : x.status === "cancelled" ? "Stars back" : `Waiting for ${PARENT_NAME}`}</span></div>`; }).join("")}</div>` : ""}
   <h2>Prizes</h2>
   <div class="rows shop">${SHOP.map((s) => `<div class="row"><span class="ico">${s.em}</span><span class="txt"><b>${s.name}</b><small class="price">${s.stars} ⭐</small></span>${kid ? `<button class="mini" data-buy="${s.id}" ${t.balance < s.stars ? "disabled" : ""}>${t.balance < s.stars ? `${s.stars - t.balance} more` : "Get it!"}</button>` : ""}</div>`).join("")}</div>`;
@@ -2565,7 +2688,7 @@ document.addEventListener("click", async (e) => {
       try { await ensureData("stories"); } catch { toast("The stories didn’t load. Check the internet."); return; }
       S.view = "stories"; S.round = null; render(); return;
     }
-    if (v === "home" || v === "rewards" || v === "grownups" || v === "voices" || v === "games" || v === "trophies") { S.view = v; S.round = null; render(); if (v === "trophies") say(`Your trophy room! You finished ${plural(tally().adv.levels, "level", "levels")}.`); if (v === "rewards") say(`You have ${plural(tally().balance, "star", "stars")}!`); return; }
+    if (v === "home" || v === "rewards" || v === "grownups" || v === "voices" || v === "games" || v === "trophies" || v === "flashmenu") { S.view = v; S.round = null; render(); if (v === "trophies") say(`Your trophy room! You finished ${plural(tally().adv.levels, "level", "levels")}.`); if (v === "rewards") say(`You have ${plural(tally().balance, "star", "stars")}!`); return; }
     startRound(v);
     return;
   }
@@ -2578,6 +2701,17 @@ document.addEventListener("click", async (e) => {
     S.level = L.n; S.view = "level"; S.round = null; render(); say(`Level ${L.n}. ${L.name}!`);
     return;
   }
+  const fb = e.target.closest("[data-flash],[data-fmode],[data-fflip],[data-fknow]");
+  if (fb) {
+    if (fb.dataset.flash) { openFlash(fb.dataset.flash, fb.dataset.fm); return; }
+    const f = S.flash;
+    if (fb.dataset.fmode) { f.mode = fb.dataset.fmode; f.sel = null; f.flipped = false; render(); flashPrompt(); return; }
+    if (fb.dataset.fflip && !f.flipped) { flipCard(() => { f.flipped = true; render(); flashSay(f.items[f.order[f.pos]]); }); return; }
+    if (fb.dataset.fknow) flashKnow(fb.dataset.fknow === "1");
+    return;
+  }
+  const fpath = e.target.closest(".map.tap path[data-i]");
+  if (fpath && S.view === "flash" && S.flash.mode === "explore") { flashTap(+fpath.dataset.i); return; }
   const tp = e.target.closest("[data-topic]");
   if (tp) { const t = TOPICS.find((x) => x.id === tp.dataset.topic); if (!t) return; S.topic = t.id; S.view = "topic"; S.round = null; render(); say(`${t.name}! Pick a lesson.`); return; }
   const lsb = e.target.closest("[data-lesson],[data-lpractice],[data-boss]");
@@ -2720,7 +2854,7 @@ paintTheme();
 // The home-screen app has no back swipe or pull-to-refresh of its own, so the app adds them.
 // Swipe from the left edge: back one screen (not during a game; the ✕ button does that). Swipe sideways on a story: turn the page.
 // Pull down at the top: refresh (not during a game). In Safari, its own back swipe goes back one screen.
-const BACK = { done: "home", rewards: "home", grownups: "home", voices: "grownups", stories: "home", story: "stories", games: "home", trophies: "home", level: "home", lesson: "level", lessondone: "level", levelup: "home", topic: "games", placed: "home" };
+const BACK = { done: "home", rewards: "home", grownups: "home", voices: "grownups", stories: "home", story: "stories", games: "home", trophies: "home", level: "home", lesson: "level", lessondone: "level", levelup: "home", topic: "games", placed: "home", flash: "flashmenu", flashmenu: "games" };
 const EDGE = 28;
 const standalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
 const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -2806,7 +2940,7 @@ document.addEventListener("touchcancel", () => endGesture(true));
   try {
     const j = await load();
     Object.assign(S, { role: j.role, space: j.space, data: j.data || {} });
-    for (const c of ["answers", "days", "redemptions", "grants", "freezes", "lessons"]) S.data[c] ||= {};
+    for (const c of ["answers", "days", "redemptions", "grants", "freezes", "lessons", "cards"]) S.data[c] ||= {};
     render();
     loadClipIndex();
     if (S.api) { ensureData("states").catch(() => {}); ensureData("countries").catch(() => {}); ensureData("sounds").catch(() => {}); }

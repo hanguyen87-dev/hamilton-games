@@ -6,12 +6,13 @@ import { getSession, json, sameOrigin } from "../lib/auth.js";
 //   answers     one per question tried: { g: game, d: day, ok: right on the first try, t: time }
 //   days        one per finished "Today's 5": { d: day, n: right on the first try, t: time }
 //   redemptions reward requests; grants = stars from a parent; freezes = streak pauses
+//   cards       one per flashcard deck: { known: [card ids], t }
 //   lessons     one per finished Adventure lesson (id like "3b") or level challenge ("c3"): { lv, n: best right on the first try, of, pass?, d, t }
 const PARENT_ONLY = new Set(["grants", "freezes"]);
 const PARENT_WRITES = new Set([...PARENT_ONLY, "redemptions"]);
 const ID = /^[A-Za-z0-9_.:-]{1,120}$/;
 const MAX_BODY = 64 * 1024;
-const BATCH = new Set(["answers", "days", "lessons"]), MAX_BATCH = 60;
+const BATCH = new Set(["answers", "days", "lessons", "cards"]), MAX_BATCH = 60;
 
 // Reward shop: Hamilton can only ask for a reward at its real price; only a parent can mark it given or cancel it.
 // Must match SHOP in index.html.
