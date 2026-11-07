@@ -54,7 +54,7 @@ Same as SAT Daily Ten, no framework, no build step: `index.html` (the whole app)
 
 - Vercel project `hamilton-games` (team `hanguyen-8346s-projects`), private Blob store `hamilton-games-progress`. Live at https://hamilton-games.vercel.app, and at https://games.hanolabs.com once its DNS is in.
 - Environment variables (Production): `STUDENT_PASSWORD`, `PARENT_PASSWORD`, `SESSION_SECRET`, `CRON_SECRET`, `BLOB_READ_WRITE_TOKEN` (added by the Blob store).
-- Deploy a change: `vercel deploy --prod --yes --scope hanguyen-8346s-projects` from this folder. Don't commit a package-lock.json: local npm goes through the Mercor registry and breaks Vercel builds.
+- Deploy a change: `vercel deploy --prod --yes --scope hademolab` from this folder. Don't commit a package-lock.json: local npm goes through the Mercor registry and breaks Vercel builds.
 - games.hanolabs.com DNS at Squarespace: CNAME `games` -> `22b9ee980dbaa05b.vercel-dns-017.com`, TXT `_vercel` -> `vc-domain-verify=games.hanolabs.com,73a9d51d014b399404b5` (added next to the existing sat and cards TXT records, not replacing them).
 - On his iPad or phone: open the address in Safari, Share, Add to Home Screen, log in as Hamilton.
 
@@ -90,3 +90,5 @@ Same as SAT Daily Ten, no framework, no build step: `index.html` (the whole app)
 ## Flashcards and maps
 - Games → 🃏 Flashcards and maps (also a Flashcards row inside matching topics). Decks in `DECKS`: 50 States, Countries, Continents and oceans (map decks: Explore = tap the map to flip its card; Flashcards = one lights up, guess, flip, "I knew it" / "Still learning"), plus Flags, Famous places, Coins, Letter sounds, Times tables, Shapes.
 - Known cards are saved per deck in the `cards` collection ({ known: [ids] }) and fill in green on the map. Each new known card = +1 star. "Still learning" brings the card back a few cards later.
+
+> 2026-11-07: this project was moved to the **hademolab** Pro team for about 2 weeks (Ha's choice, more deploys). Its Blob store stays on the old team (hanguyen-8346s-projects) and keeps working through the copied BLOB_READ_WRITE_TOKEN. To move back: Vercel → project → Settings → General → Transfer, then set .vercel/project.json orgId back to team_OrD5suyt6yUuAG4L8IubXbrH and deploy with --scope hanguyen-8346s-projects.
