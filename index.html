@@ -196,8 +196,8 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; } }
 .loading { text-align: center; padding: 80px 0; font-size: 1.4rem; color: var(--muted); }
 /* adventure map */
-.quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: -8px 0 24px; }
-.quick button { border: 2px solid var(--line); background: var(--surface); border-radius: 18px; box-shadow: var(--shadow); padding: 8px 4px; font-weight: 800; font-size: .95rem; display: grid; justify-items: center; gap: 2px; }
+.quick { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: -8px 0 24px; }
+.quick button { border: 2px solid var(--line); background: var(--surface); border-radius: 18px; box-shadow: var(--shadow); padding: 8px 2px; font-weight: 800; font-size: clamp(.7rem, 3vw, .95rem); display: grid; justify-items: center; gap: 2px; min-width: 0; }
 .quick button span { font-size: 2rem; line-height: 1.1; }
 .quick button:active { transform: translateY(4px); box-shadow: none; }
 .adv { position: relative; margin: 0 0 24px; border-radius: 28px; background: linear-gradient(180deg, var(--good-bg), var(--sky-soft) 35%, var(--bg) 60%, var(--good-bg) 85%, var(--sky-soft)); overflow: hidden; }
@@ -1772,6 +1772,7 @@ function mapView(t) {
   <div class="quick">
     <button data-go="games"><span>🎮</span>Games</button><button data-go="stories"><span>📚</span>Stories</button>
     <button data-go="trophies"><span>🏆</span>Trophies</button><button data-go="rewards"><span>🎁</span>Prizes</button>
+    <button data-go="grownups"><span>🔒</span>Parent</button>
   </div>
   ${(S.data.lessons || {}).place ? "" : `<button class="row boss" data-act="place"><span class="ico">🧭</span><span class="txt"><b>Find my level!</b><small>A quick quiz to start in just the right place.</small></span></button>`}
   <h2>🗺️ My adventure</h2>
@@ -1955,6 +1956,7 @@ function grownupsView(t) {
   }
   const reqs = Object.entries(S.data.redemptions || {}).sort((a, b) => b[1].t - a[1].t);
   const open = reqs.filter(([, x]) => x.status === "requested");
+  const top = `<div class="panel" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b style="flex:1">${S.role === "tester" ? "🧪 Test mode" : `👋 Hi, ${PARENT_NAME}!`}</b><button class="mini soft" data-act="logout">Log out</button></div>`;
   const answers = Object.values(S.data.answers || {}), weekAgo = addDay(dayOf(), -6);
   const rows = GAMES.map((g) => {
     const mine = answers.filter((a) => a.g === g.id), last = mine.sort((a, b) => b.t - a.t).slice(0, 20), wk = mine.filter((a) => a.d >= weekAgo);
@@ -1962,7 +1964,7 @@ function grownupsView(t) {
     return `<tr><td>${g.ico} ${g.name}</td><td class="n">${levelOf(g.id)}</td><td class="n">${wk.length}</td><td class="n">${mine.length}</td><td class="n">${pct}</td></tr>`;
   }).join("");
   const freezes = Object.entries(S.data.freezes || {}).filter(([, f]) => !f.removed).sort((a, b) => b[1].from.localeCompare(a[1].from));
-  return `<div class="panel"><h2>Prize requests</h2>
+  return `${top}<div class="panel"><h2>Prize requests</h2>
     ${open.length ? `<div class="list">${open.map(([id, x]) => { const it = SHOP.find((s) => s.id === x.item) || { em: "🎁", name: x.item }; return `<div class="li"><span class="grow">${it.em} <b>${esc(it.name)}</b> · ${x.stars} ⭐ · ${new Date(x.t).toLocaleDateString()}</span><button class="mini" data-give="${esc(id)}">Given ✓</button><button class="mini soft" data-cancel="${esc(id)}">Cancel</button></div>`; }).join("")}</div>` : `<p>No requests right now.</p>`}
   </div>
   <div class="panel"><h2>${KID}'s adventure</h2><p>Level ${currentLevel()} · ${t.adv.lessons} lessons and ${t.adv.levels} levels done. Levels 1 to ${LEVELS.filter((L) => L.lessons).length} are ready; the rest are coming.
