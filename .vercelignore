@@ -6,3 +6,4 @@ backups
 tools
 *.md
 .gitignore
+audio-samples

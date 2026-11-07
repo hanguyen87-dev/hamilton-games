@@ -6,6 +6,7 @@ A private, phone-first learning game for Hamilton (almost 5), built from the SAT
 
 | Game | Level 1 | Level 5 |
 |---|---|---|
+| 🔤 Letter Sounds | Which letter says /m/? First sounds of pictures | Read 3-letter words, missing letter, sh, ch, th |
 | 🍎 Counting | Count 1 to 5 things | Count to 20, more or fewer, before and after, count by 2s, 5s, and 10s |
 | ➕ Adding | Pictures, totals up to 5 | Numbers to 20, take away, missing number (5 + ? = 8) |
 | 🪙 Coins | Which one is a penny? Count pennies | Mixed coins up to $1, which group has more money (coins have no numbers from level 4) |
@@ -17,6 +18,12 @@ A private, phone-first learning game for Hamilton (almost 5), built from the SAT
 - **Questions are made up on the fly**, so they don't run out. Each game has a hidden level (1 to 5): up after 80% right on the first try, down at 40%, worked out from his saved answers.
 - **Read aloud:** every question and its choices are spoken (the phone's built-in voice). Word choices have a 🔊 button; 🗣️ repeats the question.
 - **Wrong answers** shake and ask for another try. Only the first try counts.
+
+## Reading
+
+- **Letter Sounds** game: sounds in teaching order (m, s, a, t, p, i, n, f, o, d, c, h, e, r, …), first sounds, blending by ear (/k/ /a/ /t/ → 🐱), reading words with tap-to-hear letter tiles and a 🐢 Sound it out button.
+- **Stories**: 12 short books written for him in `data/reading.json`, using only sounds he's learning plus a few sight words (the, is, a, I, …). Tapping a word sounds it out, then says it.
+- **Voice clips**: `audio/*.mp3` made once by `tools/build_audio.mjs` with a Google Cloud Text-to-Speech voice (pure sounds like /k/, which the device voice can't say). The clip list comes from `clipSpecs()` in `index.html`. Missing clips fall back to the device voice. The API key lives in the Mac Keychain (`hamilton-tts`), never in files. After changing reading content, rerun the script and redeploy.
 
 ## Stars and prizes
 

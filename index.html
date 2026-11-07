@@ -121,6 +121,22 @@ h2 { font-size: 1.3rem; margin: 0 0 10px; }
 .bigtext { font-size: 4.2rem; font-weight: 800; letter-spacing: .1em; color: var(--brand); }
 .flagbig { font-size: clamp(6rem, 30vw, 8.5rem); line-height: 1.05; }
 
+/* reading */
+.ch.letter { font-size: clamp(2.8rem, 13vw, 3.6rem); }
+.ch.wordch { font-size: clamp(1.9rem, 8.5vw, 2.5rem); letter-spacing: .04em; }
+.bigsnd { font-size: 2.4rem; border: 0; background: var(--sky-soft); border-radius: 24px; padding: 12px 30px; }
+.word { display: flex; gap: 8px; justify-content: center; margin: 4px 0 10px; }
+.tile { font: inherit; font-size: clamp(2.3rem, 11vw, 2.9rem); font-weight: 800; min-width: 68px; height: 82px; padding: 0 10px; border-radius: 16px; border: 3px solid var(--line); background: var(--surface); box-shadow: var(--shadow); display: grid; place-items: center; color: var(--ink); }
+.tile.q { border-style: dashed; border-color: var(--brand); color: var(--brand); }
+.tile.on { background: var(--sun); color: #2B2118; }
+.picword { display: grid; justify-items: center; gap: 6px; }
+.sent { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 8px; margin: 6px 0 22px; }
+.wd { font: inherit; font-size: clamp(2rem, 9vw, 2.8rem); font-weight: 800; border: 0; background: none; padding: 0 6px; border-radius: 12px; color: var(--ink); }
+.wd.on { background: var(--sun); color: #2B2118; }
+.page-pic { font-size: clamp(4rem, 22vw, 6.5rem); text-align: center; line-height: 1.15; margin: 8px 0 4px; word-break: break-all; }
+.storynav { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 10px; }
+.storytitle { text-align: center; color: var(--muted); margin: 0; font-size: 1.05rem; }
+
 /* done */
 .done { text-align: center; padding-top: 20px; }
 .done .star { font-size: 7rem; display: inline-block; animation: spin 1.2s ease-out; }
@@ -198,6 +214,7 @@ const ROUND = 5;                 // questions per round and in Today's 5
 const PRACTICE_PER_STAR = 10;    // right on the first try in games (not Today's 5), per day
 const STREAK_EVERY = 5, STREAK_BONUS = 3;  // +3 stars every 5 days in a row
 const GAMES = [
+  { id: "sounds", ico: "🔤", name: "Letter Sounds", sub: "Sounds, blending, reading" },
   { id: "count", ico: "🍎", name: "Counting", sub: "Count things, more and less" },
   { id: "add", ico: "➕", name: "Adding", sub: "Put together and take away" },
   { id: "coins", ico: "🪙", name: "Coins", sub: "Penny, nickel, dime, quarter" },
@@ -401,6 +418,7 @@ document.addEventListener("pointerdown", () => {
 // One utterance per sentence gives natural pauses; praise is brighter, "try again" gentler, questions lift a little.
 function say(text, delay = 0, mood = "", force = false) {
   if ((!S.sound && !force) || !("speechSynthesis" in window) || !text) return;
+  stopClips();
   speechSynthesis.cancel();
   const st = STYLES[vPref.style], v = voice;
   const go = () => String(text).split(/(?<=[.!?])\s+/).forEach((part, i) => {
@@ -438,11 +456,12 @@ function toast(text) {
 
 // ---------- map data ----------
 const GEO = {};
-const geoFile = { states: "us", countries: "world", flags: "world" };
+const geoFile = { states: "us", countries: "world", flags: "world", sounds: "reading", stories: "reading" };
+const DATA_URL = { us: "/data/states.json", world: "/data/world.json", reading: "/data/reading.json" };
 async function ensureData(g) {
   const k = geoFile[g];
   if (!k || GEO[k]) return;
-  const r = await fetch(k === "us" ? "/data/states.json" : "/data/world.json");
+  const r = await fetch(DATA_URL[k]);
   if (!r.ok) throw new Error("map " + r.status);
   GEO[k] = await r.json();
 }
@@ -474,6 +493,112 @@ function worldMap(opt = {}) {
 }
 const the = (n) => /^(United|Netherlands|Philippines)/.test(n) ? "the " + n : n, The = (n) => the(n).replace(/^t/, "T");
 const flag = (iso) => String.fromCodePoint(...[...iso].map((ch) => 0x1F1E6 + ch.charCodeAt(0) - 65));
+
+// ---------- recorded clips (reading) ----------
+// audio/<id>.mp3 are made once by tools/build_audio.mjs (Google voice); audio/index.json lists them.
+// A missing clip falls back to the device voice, so the app works before the clips exist.
+const CLIPS = { have: new Set(), buf: new Map(), playing: [], token: 0 };
+async function loadClipIndex() {
+  try { const r = await fetch("/audio/index.json", { cache: "no-store" }); if (r.ok) CLIPS.have = new Set(await r.json()); } catch { /* none yet */ }
+}
+function clipBuffer(id) {
+  if (!CLIPS.buf.has(id)) {
+    const p = fetch(`/audio/${id}.mp3`).then((r) => { if (!r.ok) throw new Error("clip"); return r.arrayBuffer(); }).then((b) => ac.decodeAudioData(b));
+    p.catch(() => CLIPS.buf.delete(id));
+    CLIPS.buf.set(id, p);
+  }
+  return CLIPS.buf.get(id);
+}
+function stopClips() {
+  CLIPS.token++;
+  for (const src of CLIPS.playing) { try { src.stop(); } catch { /* already done */ } }
+  CLIPS.playing = [];
+}
+// items: [{ id, text, gap }] played in order; gap = seconds of quiet after the clip.
+async function speak(items, delay = 0) {
+  if (!S.sound || !items || !items.length) return;
+  stopClips();
+  if ("speechSynthesis" in window) speechSynthesis.cancel();
+  const token = CLIPS.token;
+  if (delay) await new Promise((r) => setTimeout(r, delay));
+  if (token !== CLIPS.token) return;
+  const fallback = () => say(items.map((it) => it.text).join(" "));
+  if (!items.every((it) => CLIPS.have.has(it.id))) { fallback(); return; }
+  try {
+    ac ||= new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === "suspended") await ac.resume();
+    const bufs = await Promise.all(items.map((it) => clipBuffer(it.id)));
+    if (token !== CLIPS.token) return;
+    let t = ac.currentTime + 0.03;
+    bufs.forEach((b, i) => {
+      const src = ac.createBufferSource();
+      src.buffer = b; src.connect(ac.destination); src.start(t);
+      CLIPS.playing.push(src);
+      t += b.duration + (items[i].gap ?? 0.12);
+    });
+  } catch { if (token === CLIPS.token) fallback(); }
+}
+
+// ---------- reading ----------
+const R = () => GEO.reading;
+const soundOf = (k) => R().sounds.find((x) => x.k === k);
+const sameSound = (a, b) => soundOf(a).ipa === soundOf(b).ipa;  // c and k
+const DIGRAPHS = { sh: "sh", ch: "ch", th: "th", ck: "k", qu: "qu" };
+// A word as letter groups with their sounds (duck -> d, u, ck); null for sight words and spellings not taught.
+function graphemes(word) {
+  word = word.toLowerCase();
+  if (R().sight.includes(word)) return null;
+  const out = [];
+  for (let i = 0; i < word.length;) {
+    const two = word.slice(i, i + 2);
+    if (DIGRAPHS[two]) { out.push({ g: two, k: DIGRAPHS[two] }); i += 2; continue; }
+    if (word[i] === word[i + 1]) { out.push({ g: two, k: word[i] }); i += 2; continue; }  // egg, buzz: one sound
+    if (!soundOf(word[i])) return null;
+    out.push({ g: word[i], k: word[i] }); i++;
+  }
+  return out;
+}
+const clipId = (x) => String(x).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+const cap = (w) => w.charAt(0).toUpperCase() + w.slice(1);
+const xml = (x) => String(x).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" }[c]));
+const tokens = (t) => t.split(/\s+/).map((w) => w.replace(/[^A-Za-z-]/g, "").toLowerCase()).filter(Boolean);
+const RP = { listen: "Listen!", blend: "What word is this?", read: "Can you read this word? Tap the picture.", word: "Which word goes with the picture?", missing: "Which letter is missing?", end: "The end!" };
+const rq = (k) => ({ id: "q-" + k, text: RP[k] });
+const sndItem = (k, gap) => ({ id: "s-" + clipId(k), text: soundOf(k).say, gap });
+const wordItem = (w, gap) => ({ id: "w-" + clipId(w), text: w === "i" ? "I" : w, gap });
+const letterQ = (k) => ({ id: "q-letter-" + clipId(k), text: `Which letter says ${soundOf(k).say}?` });
+const firstQ = (w) => ({ id: "q-first-" + clipId(w), text: `What sound does ${w} start with?` });
+const firstA = (w, k) => ({ id: "a-first-" + clipId(w), text: `${cap(w)} starts with ${soundOf(k).say}.` });
+const lineItem = (id, text) => ({ id: clipId(id), text });
+const sample = (arr, n) => shuffle(arr).slice(0, n);
+// Sound it out, then say the word: c... a... t... cat.
+const soundOut = (w, gap = 0.4) => { const gs = graphemes(w); return gs ? [...gs.map((x) => sndItem(x.k, gap)), wordItem(w)] : [wordItem(w)]; };
+// Every clip the app can play, with the Google voice input; tools/build_audio.mjs reads this.
+function clipSpecs() {
+  const r = R(), out = new Map(), add = (it, ssml) => { if (!out.has(it.id)) out.set(it.id, { id: it.id, text: it.text, ssml: ssml || null }); };
+  const ph = (k) => `<phoneme alphabet="ipa" ph="${xml(soundOf(k).ipa)}">${xml(k)}</phoneme>`;
+  const word = (w) => add(wordItem(w), w === "a" ? `<speak><phoneme alphabet="ipa" ph="ə">a</phoneme></speak>` : null);
+  for (const x of r.sounds) {
+    add(sndItem(x.k), `<speak>${ph(x.k)}</speak>`);
+    add(letterQ(x.k), `<speak>Which letter says <break time="300ms"/>${ph(x.k)}?</speak>`);
+    for (const [w] of x.pics) { add(firstQ(w)); add(firstA(w, x.k), `<speak>${xml(cap(w))} starts with <break time="300ms"/>${ph(x.k)}.</speak>`); word(w); }
+  }
+  for (const [w] of r.words) word(w);
+  for (const st of r.stories) { add(lineItem(`t-${st.id}-title`, st.title)); st.pages.forEach(([t], i) => { add(lineItem(`t-${st.id}-${i}`, t)); tokens(t).forEach(word); }); }
+  Object.keys(RP).forEach((k) => add(rq(k)));
+  PRAISE.forEach((t, i) => add(lineItem("p-" + i, t)));
+  OOPS.forEach((t, i) => add(lineItem("o-" + i, t)));
+  return [...out.values()];
+}
+const earBtn = `<button class="bigsnd" data-act="repeat" aria-label="Hear it again">👂🔊</button>`;
+const tilesOf = (w, tap = true) => `<div class="word">${graphemes(w).map((x) => tap ? `<button class="tile" data-snd="${esc(x.k)}">${esc(x.g)}</button>` : `<span class="tile">${esc(x.g)}</span>`).join("")}</div>`;
+// Words that look or sound alike (same ending or same start) make the harder wrong choices.
+function likeWords(w, n, near) {
+  const pool = R().words.filter(([x]) => x !== w);
+  if (!near) return sample(pool, n);
+  const score = ([x]) => (x.slice(-2) === w.slice(-2) ? 2 : 0) + (x[0] === w[0] ? 1 : 0) + Math.random();
+  return pool.sort((a, b) => score(b) - score(a)).slice(0, n);
+}
 
 // ---------- question makers ----------
 // Each returns { key, prompt, say, pic, choices: [{ key, html, say, kind }], answer, after, tap? }.
@@ -649,6 +774,46 @@ const GEN = {
       choices: opts.map((o) => ({ key: o.iso, html: o.name, say: o.name, kind: "text" })), answer: c.iso, after: `Yes, that's ${the(c.name)}! It's in ${c.cont}.` };
   },
 
+  sounds(lv) {
+    const r = R(), known = r.sounds.slice(0, [6, 12, 20, 26, 29][lv - 1]).filter((x) => x.k !== "x"), withPics = known.filter((x) => x.pics.length);
+    const type = pick([["letter", "letter", "first"], ["letter", "first", "first", "blend"], ["first", "blend", "blend", "letter"], ["blend", "read", "read", "first"], ["read", "word", "missing", "blend", "letter"]][lv - 1]);
+    const letterCh = (list) => list.map((x) => ({ key: x.k, html: esc(x.k), kind: "letter", say: "" }));
+    const notLike = (k) => known.filter((x) => x.k !== k && !sameSound(x.k, k));
+    if (type === "letter") {
+      const x = pick(lv === 5 ? r.sounds.filter((y) => y.k.length === 2 || known.includes(y)).filter((y) => y.k !== "x") : known);
+      const pool = lv === 5 ? r.sounds.filter((y) => y.k !== x.k && y.k !== "x" && !sameSound(y.k, x.k)) : notLike(x.k);
+      return { key: "l" + x.k, prompt: `Which letter says /${x.say}/?`, say: `Which letter says ${x.say}?`, clips: [letterQ(x.k)], pic: earBtn,
+        choices: letterCh(shuffle([x, ...sample(pool, 2)])), answer: x.k, after: `${x.k} says /${x.say}/.`, afterClips: [sndItem(x.k)] };
+    }
+    if (type === "first") {
+      const x = pick(withPics), [w, em] = pick(x.pics);
+      return { key: "f" + w, prompt: `What sound does ${w} start with?`, say: `What sound does ${w} start with?`, clips: [firstQ(w)], pic: `<div class="flagbig">${em}</div>`,
+        choices: letterCh(shuffle([x, ...sample(notLike(x.k), 2)])), answer: x.k, after: `${cap(w)} starts with /${x.say}/.`, afterClips: [firstA(w, x.k)] };
+    }
+    const fits = r.words.filter(([w]) => graphemes(w).every((g) => known.some((k) => k.k === g.k || sameSound(k.k, g.k))));
+    const [w, em] = pick(fits.length >= 6 ? fits : r.words), gs = graphemes(w), near = lv >= 4;
+    if (type === "blend") {
+      const opts = shuffle([[w, em], ...likeWords(w, 2, near)]);
+      return { key: "b" + w, prompt: "Listen! What word is it?", say: `${gs.map((g) => soundOf(g.k).say).join(", ")}. What word is this?`,
+        clips: [rq("listen"), ...gs.map((g) => sndItem(g.k, 0.45)), rq("blend")], pic: earBtn,
+        choices: opts.map(([x, e]) => ({ key: x, html: e, kind: "pic", say: "" })), answer: w, after: `${gs.map((g) => g.g).join("-")}… ${w}!`, afterClips: soundOut(w, 0.3), sounds: gs };
+    }
+    if (type === "read") {
+      const opts = shuffle([[w, em], ...likeWords(w, 2, near)]);
+      return { key: "r" + w, prompt: "Read the word. Tap the picture.", say: RP.read, clips: [rq("read")], pic: tilesOf(w) + `<button class="mini soft" data-act="soundout">🐢 Sound it out</button>`,
+        choices: opts.map(([x, e]) => ({ key: x, html: e, kind: "pic", say: "" })), answer: w, after: `${cap(w)}!`, afterClips: soundOut(w, 0.3), sounds: gs };
+    }
+    if (type === "missing") {
+      const first = gs[0], wrong = sample(r.sounds.filter((x) => x.k.length === 1 && x.k !== "x" && x.k !== first.g && !sameSound(x.k, first.k)), 2);
+      const blank = `<div class="word"><span class="tile q">?</span>${gs.slice(1).map((x) => `<span class="tile">${esc(x.g)}</span>`).join("")}</div>`;
+      return { key: "m" + w, prompt: "Which letter is missing?", say: RP.missing, clips: [rq("missing"), wordItem(w)], pic: `<div class="picword"><div class="flagbig">${em}</div>${blank}</div>`,
+        choices: letterCh(shuffle([{ k: first.g }, ...wrong])), answer: first.g, after: `${cap(w)}!`, afterClips: soundOut(w, 0.3) };
+    }
+    const opts = shuffle([[w, em], ...likeWords(w, 2, true)]);
+    return { key: "w" + w, prompt: "Which word goes with the picture?", say: RP.word, clips: [rq("word")], pic: `<div class="flagbig">${em}</div>`,
+      choices: opts.map(([x]) => ({ key: x, html: esc(x), kind: "word", say: "" })), answer: w, after: `${cap(w)}!`, afterClips: soundOut(w, 0.3) };
+  },
+
   countries(lv) {
     const all = GEO.world.countries, idx = (c) => all.indexOf(c);
     const huge = all.filter((c) => c.area >= 2400), big = all.filter((c) => c.area >= 700), mid = all.filter((c) => c.area >= 190);
@@ -729,7 +894,7 @@ async function nextQuestion() {
   Object.assign(q, { g, lv });
   Object.assign(r, { q, tries: 0, solved: false });
   render();
-  say(q.say, 150);
+  if (q.clips) speak(q.clips, 150); else say(q.say, 150);
 }
 function choose(key, el) {
   const r = S.round, q = r && r.q;
@@ -745,7 +910,8 @@ function choose(key, el) {
     const praise = pick(PRAISE);
     msg.className = "msg good"; msg.textContent = `${praise} ${q.after || ""}`;
     sfx.good(); confetti();
-    say(`${praise} ${q.after || ""}`, 380, "praise");
+    if (q.clips) speak([lineItem("p-" + PRAISE.indexOf(praise), praise), ...(q.afterClips || [])], 380);
+    else say(`${praise} ${q.after || ""}`, 380, "praise");
     put("answers", uid(), { g: q.g, d: dayOf(), ok: first, lv: q.lv, t: Date.now(), ...(r.mode === "today" ? { dl: 1 } : {}) });
     const next = $("#nextBtn");
     next.hidden = false;
@@ -764,7 +930,8 @@ function choose(key, el) {
     if (el) { el.classList.add("no"); el.disabled = true; }
     const oops = pick(OOPS);
     msg.className = "msg bad"; msg.textContent = oops;
-    sfx.bad(); say(oops, 250, "oops");
+    sfx.bad();
+    if (q.clips) speak([lineItem("o-" + OOPS.indexOf(oops), oops)], 250); else say(oops, 250, "oops");
   }
 }
 function advance() {
@@ -802,6 +969,8 @@ function render() {
   else if (S.view === "rewards") app.innerHTML = rewardsView(t);
   else if (S.view === "grownups") app.innerHTML = grownupsView(t);
   else if (S.view === "voices") app.innerHTML = voicesView();
+  else if (S.view === "stories") app.innerHTML = storiesView();
+  else if (S.view === "story") app.innerHTML = storyView();
   else app.innerHTML = homeView(t);
   if (S.view === "play") renderDots();
   window.scrollTo(0, 0);
@@ -812,6 +981,8 @@ function homeView(t) {
   <button class="today${t.todayDone ? " done" : ""}" data-go="today"><span class="big">${t.todayDone ? "✅" : "⭐"}</span><span><b>${t.todayDone ? "Today's 5: done!" : "Today's 5"}</b><span>${t.todayDone ? "Play again just for fun" : "5 questions, then a star!"}</span></span></button>
   <h2>Games</h2>
   <div class="rows">${GAMES.map((g) => { const lv = levelOf(g.id); return `<button class="row" data-go="${g.id}"><span class="ico">${g.ico}</span><span class="txt"><b>${g.name}</b><small>${g.sub}</small></span><span class="lv"><i>${"★".repeat(lv)}${"☆".repeat(5 - lv)}</i>Level ${lv}</span></button>`; }).join("")}</div>
+  <h2>Read</h2>
+  <div class="rows"><button class="row" data-go="stories"><span class="ico">📚</span><span class="txt"><b>Stories</b><small>Little books to read with ${PARENT_NAME}</small></span></button></div>
   <p class="note">🎯 ${left === PRACTICE_PER_STAR && t.practiceToday ? "Bonus star earned! " : ""}${plural(left, "more right answer", "more right answers")} in games for a bonus star.</p>
   <div class="rows">
     <button class="row" data-go="rewards"><span class="ico">🎁</span><span class="txt"><b>My stars and prizes</b><small>${plural(t.balance, "star", "stars")} to spend</small></span></button>
@@ -820,9 +991,9 @@ function homeView(t) {
 }
 function playView() {
   const r = S.round, q = r.q;
-  const n = q.choices?.length, text = q.choices?.some((c) => c.kind === "text");
+  const n = q.choices?.length, text = q.choices?.some((c) => c.kind === "text" || c.kind === "word");
   const cls = q.wide || q.choices?.some((c) => c.kind === "map") || (n === 3 && text) ? "wide" : n === 3 ? "n3" : "";
-  const choices = q.tap ? "" : `<div class="choices ${cls}">${q.choices.map((c) => `<button class="ch ${c.kind === "text" ? "txt" : c.kind === "flag" ? "flag" : c.kind === "pic" ? "pic-ch" : ""}" data-k="${esc(c.key)}" aria-label="${esc(c.say || "choice")}">${c.html}${c.kind === "text" ? `<span class="spk" data-say="${esc(c.say)}" aria-label="Hear ${esc(c.say)}">🔊</span>` : ""}</button>`).join("")}</div>`;
+  const choices = q.tap ? "" : `<div class="choices ${cls}">${q.choices.map((c) => `<button class="ch ${({ text: "txt", flag: "flag", pic: "pic-ch", letter: "letter", word: "wordch" })[c.kind] || ""}" data-k="${esc(c.key)}" aria-label="${esc(c.say || "choice")}">${c.html}${c.kind === "text" ? `<span class="spk" data-say="${esc(c.say)}" aria-label="Hear ${esc(c.say)}">🔊</span>` : ""}</button>`).join("")}</div>`;
   return `<div class="playbar"><button class="icon" data-act="quit" aria-label="Stop">✕</button><div class="dots" id="dots"></div><button class="icon" data-act="repeat" aria-label="Hear it again">🗣️</button></div>
   ${S.role === "parent" ? `<p class="grownup-play">Grown-up play: not saved</p>` : ""}
   <p class="prompt">${esc(q.prompt)}</p>
@@ -880,6 +1051,18 @@ function voicesView() {
     <p><b>Mac:</b> System Settings → Accessibility → Spoken Content → System voice → Manage Voices → English → tick Ava (Premium) or Zoe (Premium).</p></div>`}
   <div class="panel"><h2>Voices on this device</h2><p>Sample: “${esc(SAMPLE)}”</p><div class="list">${rows || "<p>Loading voices… If nothing shows, reopen the app.</p>"}</div></div>`;
 }
+function storiesView() {
+  return `<h2 style="margin-top:6px">📚 Stories</h2><p class="storytitle" style="text-align:left;margin-bottom:14px">Tap a word to sound it out. Tap 🔊 to hear the page.</p>
+  <div class="rows">${R().stories.map((st, i) => `<button class="row" data-story="${esc(st.id)}"><span class="ico">${st.cover}</span><span class="txt"><b>${esc(st.title)}</b><small>Book ${i + 1} · ${st.pages.length} pages</small></span></button>`).join("")}</div>`;
+}
+function storyView() {
+  const st = R().stories.find((x) => x.id === S.story.id), i = S.story.page, end = i >= st.pages.length;
+  if (end) return `<section class="done"><span class="star">🎉</span><h1>The end!</h1><p>You read <b>${esc(st.title)}</b>!</p><div class="btns"><button class="btn" data-sp="0">Read it again 🔁</button><button class="btn soft" data-go="stories">More stories 📚</button></div></section>`;
+  const [text, pic] = st.pages[i];
+  const words = text.split(/\s+/).map((tok) => { const w = tokens(tok)[0]; return w ? `<button class="wd" data-w="${esc(w)}">${esc(tok)}</button>` : esc(tok); }).join(" ");
+  return `<p class="storytitle">${esc(st.title)} · page ${i + 1} of ${st.pages.length}</p><div class="page-pic">${pic}</div><p class="sent">${words}</p>
+  <div class="storynav"><button class="btn soft" data-sp="${i - 1}" ${i ? "" : "disabled"} aria-label="Back">◀</button><button class="btn" data-act="readpage">🔊 Hear it</button><button class="btn soft" data-sp="${i + 1}" aria-label="Next">▶</button></div>`;
+}
 function grownupsView(t) {
   const adult = S.role === "parent" || S.role === "tester";
   if (!adult) {
@@ -923,10 +1106,27 @@ document.addEventListener("click", async (e) => {
   const go = e.target.closest("[data-go]");
   if (go) {
     const v = go.dataset.go;
+    if (v === "stories") {
+      try { await ensureData("stories"); } catch { toast("The stories didn’t load. Check the internet."); return; }
+      S.view = "stories"; S.round = null; render(); return;
+    }
     if (v === "home" || v === "rewards" || v === "grownups" || v === "voices") { S.view = v; S.round = null; render(); if (v === "rewards") say(`You have ${plural(tally().balance, "star", "stars")}!`); return; }
     startRound(v);
     return;
   }
+  const story = e.target.closest("[data-story]");
+  if (story) { S.story = { id: story.dataset.story, page: 0 }; S.view = "story"; render(); const st = R().stories.find((x) => x.id === S.story.id); speak([lineItem(`t-${st.id}-title`, st.title)]); return; }
+  const sp = e.target.closest("[data-sp]");
+  if (sp) {
+    const st = R().stories.find((x) => x.id === S.story.id);
+    S.story.page = Math.max(0, +sp.dataset.sp); render();
+    if (S.story.page >= st.pages.length) { sfx.win(); confetti(50); speak([rq("end")], 300); }
+    return;
+  }
+  const wd = e.target.closest("[data-w]");
+  if (wd) { document.querySelectorAll(".wd.on").forEach((x) => x.classList.remove("on")); wd.classList.add("on"); speak(soundOut(wd.dataset.w)); return; }
+  const tile = e.target.closest("[data-snd]");
+  if (tile) { tile.classList.add("on"); setTimeout(() => tile.classList.remove("on"), 600); speak([sndItem(tile.dataset.snd)]); return; }
   const ch = e.target.closest(".ch");
   if (ch && S.view === "play") { choose(ch.dataset.k, ch); return; }
   const path = e.target.closest(".map.tap path[data-i]");
@@ -935,7 +1135,9 @@ document.addEventListener("click", async (e) => {
   const act = e.target.closest("[data-act]");
   if (act) {
     const a = act.dataset.act;
-    if (a === "repeat") say(S.round.q.say);
+    if (a === "repeat") { if (S.round.q.clips) speak(S.round.q.clips); else say(S.round.q.say); }
+    if (a === "readpage") { const st = R().stories.find((x) => x.id === S.story.id), i = S.story.page; speak([lineItem(`t-${st.id}-${i}`, st.pages[i][0])]); }
+    if (a === "soundout") speak(S.round.q.sounds.map((g) => sndItem(g.k, 0.45)));
     if (a === "quit") { if (S.round.mode === "today" && S.round.results.length) modal(`<span class="em">🛑</span><h2>Stop Today's 5?</h2>`, () => { S.view = "home"; S.round = null; render(); }); else { S.view = "home"; S.round = null; render(); } }
     if (a === "logout") modal(`<span class="em">👋</span><h2>Log out?</h2>`, async () => { await fetch("/api/logout", { method: "POST" }).catch(() => {}); location.href = "/login"; });
     if (a === "cleartest") modal(`<span class="em">🧪</span><h2>Clear all test data?</h2>`, async () => { await fetch("/api/db", { method: "DELETE" }); location.reload(); });
@@ -1006,7 +1208,8 @@ document.addEventListener("visibilitychange", async () => {
     Object.assign(S, { role: j.role, space: j.space, data: j.data || {} });
     for (const c of ["answers", "days", "redemptions", "grants", "freezes"]) S.data[c] ||= {};
     render();
-    if (S.api) { ensureData("states").catch(() => {}); ensureData("countries").catch(() => {}); }
+    loadClipIndex();
+    if (S.api) { ensureData("states").catch(() => {}); ensureData("countries").catch(() => {}); ensureData("sounds").catch(() => {}); }
   } catch {
     $("#app").innerHTML = `<p class="loading">Couldn’t connect. 📡<br><button class="btn" onclick="location.reload()">Try again</button></p>`;
   }
