@@ -42,14 +42,13 @@ Same as SAT Daily Ten, no framework, no build step: `index.html` (the whole app)
 
 **Preview locally:** `python3 -m http.server` in this folder and open http://localhost:8000. With no server API it saves in the browser; add `?as=parent` for the grown-up view.
 
-## Put it online (not done yet)
+## Online
 
-1. `vercel link` and create a **new** project, e.g. `hamilton-games` (team `hanguyen-8346s-projects`).
-2. Create a **new** private Blob store, e.g. `hamilton-games-progress`, connected to the project.
-3. Environment variables: `STUDENT_PASSWORD`, `PARENT_PASSWORD`, `SESSION_SECRET` (32+ random characters), `CRON_SECRET` (32+ random characters).
-4. `vercel deploy --prod --yes --scope hanguyen-8346s-projects` (no package-lock.json: local npm goes through the Mercor registry and breaks Vercel builds).
-5. Optional domain, e.g. `games.hanolabs.com`, with a CNAME at Squarespace.
-6. On his iPad or phone: open it in Safari, Share, Add to Home Screen, log in as Hamilton.
+- Vercel project `hamilton-games` (team `hanguyen-8346s-projects`), private Blob store `hamilton-games-progress`. Live at https://hamilton-games.vercel.app, and at https://games.hanolabs.com once its DNS is in.
+- Environment variables (Production): `STUDENT_PASSWORD`, `PARENT_PASSWORD`, `SESSION_SECRET`, `CRON_SECRET`, `BLOB_READ_WRITE_TOKEN` (added by the Blob store).
+- Deploy a change: `vercel deploy --prod --yes --scope hanguyen-8346s-projects` from this folder. Don't commit a package-lock.json: local npm goes through the Mercor registry and breaks Vercel builds.
+- games.hanolabs.com DNS at Squarespace: CNAME `games` -> `22b9ee980dbaa05b.vercel-dns-017.com`, TXT `_vercel` -> `vc-domain-verify=games.hanolabs.com,73a9d51d014b399404b5` (added next to the existing sat and cards TXT records, not replacing them).
+- On his iPad or phone: open the address in Safari, Share, Add to Home Screen, log in as Hamilton.
 
 ## Notes
 
