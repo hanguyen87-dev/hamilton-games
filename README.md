@@ -67,3 +67,11 @@ Same as SAT Daily Ten, no framework, no build step: `index.html` (the whole app)
 - Home-screen app: swipe from the left edge to go back one screen (not during a game), pull down at the top to refresh (saves first), swipe sideways on a story to turn pages. In Safari, its own back swipe goes back one screen.
 - Day / Night / Auto button in the top bar (saved per device, `hgt-theme`).
 - Saving: answers are sent in batches (end of a round, app hidden, 8 waiting, or after a minute) as `PUT /api/db {writes:[...]}`, to stay far under the Blob plan's 2,000 writes a month.
+
+## Adventure (home screen)
+- A winding map of 20 levels, Kindergarten to 5th grade, with a prize at the end of each grade (🏅 K, 🏆 1st, 💎 2nd, 🚀 3rd, 🌟 4th, 👑 5th). Levels 1-8 (Kindergarten and 1st grade) are built; 9-20 show as "coming soon".
+- Each level has 4 lessons (math, reading, world). A lesson = a few narrated slides to tap through (some are tap-to-count), then 5 practice questions. The level challenge (5 of 6 right on the first try) finishes a level fast.
+- Topic order follows free, trusted curricula: Common Core K-5 math, the UFLI Foundations / CKLA phonics order, and the Core Knowledge Sequence for geography. The lesson text is written for this app.
+- Content lives in `LEVELS` in index.html; new question makers: shapes, pattern, continents, oceans, tens. Progress: `lessons` collection (one doc per lesson id like "3b", "c3" for a passed challenge).
+- Stars (generous): +1 per right answer, Today's 5 +10 (+10 if all right), lesson +3, level +10, grade prize +25 (crown +100), every 5-day streak +30. Prize prices were multiplied by 10 to match (SHOP in index.html = SHOP_COST in api/db.js).
+- `tools/build_geo.cjs` also builds the 7 continent shapes (all countries merged; Russia and Turkey left neutral) and ocean label points into data/world.json.

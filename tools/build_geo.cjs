@@ -3,7 +3,8 @@
 //   NODE_PATH=<that folder>/node_modules node tools/build_geo.cjs
 const fs = require("fs"), path = require("path");
 const { geoPath, geoEqualEarth } = require("d3-geo");
-const { feature } = require("topojson-client");
+const { feature, merge } = require("topojson-client");
+const { geoCentroid } = require("d3-geo");
 const out = (f, v) => fs.writeFileSync(path.join(__dirname, "..", "data", f), JSON.stringify(v));
 // Bounds and center come from the biggest piece of land, so France's frame isn't stretched to French Guiana.
 const main = (f, gp) => f.geometry.type !== "MultiPolygon" ? f : { type: "Feature", geometry: { type: "Polygon", coordinates: f.geometry.coordinates.reduce((a, c) => gp.area({ type: "Polygon", coordinates: c }) > gp.area({ type: "Polygon", coordinates: a }) ? c : a) } };
@@ -78,5 +79,33 @@ for (const f of all) {
 }
 if (countries.length !== Object.keys(COUNTRIES).length) throw new Error("missing countries: " + Object.keys(COUNTRIES).filter((k) => !countries.find((c) => c.name === COUNTRIES[k][0])));
 countries.sort((a, b) => a.name.localeCompare(b.name));
-out("world.json", { w: 960, h: 500, land: land.join(""), countries });
+// Continents for the Adventure lessons: every country in world-atlas merged into 7 shapes (no inside borders).
+// Russia and Turkey are in both Europe and Asia, so they stay plain land. Antarctica sits below the 500-high map (h2 shows it).
+const CONT_NAME = { "Oceania": "Australia" };
+const OVERRIDE = { Russia: null, Turkey: null, Syria: "Asia", Greenland: "North America", "Papua New Guinea": "Australia", "Solomon Is.": "Australia", Vanuatu: "Australia",
+  Fiji: "Australia", "New Caledonia": "Australia", "New Zealand": "Australia", Australia: "Australia", Antarctica: "Antarctica", "Fr. S. Antarctic Lands": "Antarctica" };
+function continentOf(f) {
+  const n = f.properties.name;
+  if (Object.hasOwn(OVERRIDE, n)) return OVERRIDE[n];
+  if (COUNTRIES[n]) return CONT_NAME[COUNTRIES[n][3]] || COUNTRIES[n][3];
+  const [lon, lat] = geoCentroid(main(f, geoPath()));
+  if (lon < -25) return lat > 13 || (lon < -77.5 && lat > 7) ? "North America" : "South America";
+  if (lon < 40 && lat >= 35) return "Europe";
+  if (lat < 35 && lon > -20 && lon < 52 && !(lon > 34.5 && lat > 29.5) && !(lon > 40 && lat > 12)) return "Africa";
+  return "Asia";
+}
+const geoms = world.objects.countries.geometries, groups = {};
+for (const g of geoms) { const c = continentOf({ type: "Feature", properties: g.properties, geometry: feature(world, g).geometry }); if (c) (groups[c] ||= []).push(g); }
+const ORDER = ["North America", "South America", "Europe", "Africa", "Asia", "Australia", "Antarctica"];
+const conts = ORDER.map((name) => {
+  const m = { type: "Feature", geometry: merge(world, groups[name]) }, big = main(m, wp), [[x0, y0], [x1, y1]] = wp.bounds(m), [cx, cy] = wp.centroid(big);
+  return { name, d: round(wp(m)), c: [Math.round(cx), Math.round(cy)], b: [x0, y0, x1, y1].map(Math.round) };
+});
+const neutral = geoms.filter((g) => continentOf({ type: "Feature", properties: g.properties, geometry: feature(world, g).geometry }) === null).map((g) => round(wp(feature(world, g))));
+// Ocean label points (lon, lat), for "Which ocean has the star?"
+const OCEANS = { Pacific: [-140, 0], Atlantic: [-35, 20], Indian: [78, -22], Arctic: [10, 80], Southern: [40, -60] };
+const oceans = Object.fromEntries(Object.entries(OCEANS).map(([k, ll]) => [k, proj(ll).map(Math.round)]));
+const h2 = Math.ceil(Math.max(...conts.map((c) => c.b[3]))) + 4;
+out("world.json", { w: 960, h: 500, h2, land: land.join(""), countries, conts, neutral: neutral.join(""), oceans });
+console.log("continents", conts.map((c) => `${c.name}:${groups[c.name].length}`).join(" "), "h2", h2, "oceans", JSON.stringify(oceans));
 console.log("states", states.length, "countries", countries.length);

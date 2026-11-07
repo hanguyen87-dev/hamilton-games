@@ -6,15 +6,16 @@ import { getSession, json, sameOrigin } from "../lib/auth.js";
 //   answers     one per question tried: { g: game, d: day, ok: right on the first try, t: time }
 //   days        one per finished "Today's 5": { d: day, n: right on the first try, t: time }
 //   redemptions reward requests; grants = stars from a parent; freezes = streak pauses
+//   lessons     one per finished Adventure lesson (id like "3b") or level challenge ("c3"): { lv, n: best right on the first try, of, pass?, d, t }
 const PARENT_ONLY = new Set(["grants", "freezes"]);
 const PARENT_WRITES = new Set([...PARENT_ONLY, "redemptions"]);
 const ID = /^[A-Za-z0-9_.:-]{1,120}$/;
 const MAX_BODY = 64 * 1024;
-const BATCH = new Set(["answers", "days"]), MAX_BATCH = 60;
+const BATCH = new Set(["answers", "days", "lessons"]), MAX_BATCH = 60;
 
 // Reward shop: Hamilton can only ask for a reward at its real price; only a parent can mark it given or cancel it.
 // Must match SHOP in index.html.
-const SHOP_COST = { sticker: 3, story: 5, icecream: 8, park: 10, movie: 12, pancakes: 15, toy: 25, zoo: 40, bigtoy: 60 };
+const SHOP_COST = { sticker: 30, story: 50, icecream: 80, park: 100, movie: 120, pancakes: 150, toy: 250, zoo: 400, bigtoy: 600 };
 function studentRedemptionError(existing, doc) {
   if (existing) return "This reward request already exists.";
   if (doc.status !== "requested" || !Object.hasOwn(SHOP_COST, doc.item) || doc.stars !== SHOP_COST[doc.item]) return "Bad reward request.";

@@ -195,6 +195,79 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
 @keyframes fall { to { transform: translate(var(--dx), 105vh) rotate(var(--r)); } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; } }
 .loading { text-align: center; padding: 80px 0; font-size: 1.4rem; color: var(--muted); }
+/* adventure map */
+.quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: -8px 0 24px; }
+.quick button { border: 2px solid var(--line); background: var(--surface); border-radius: 18px; box-shadow: var(--shadow); padding: 8px 4px; font-weight: 800; font-size: .95rem; display: grid; justify-items: center; gap: 2px; }
+.quick button span { font-size: 2rem; line-height: 1.1; }
+.quick button:active { transform: translateY(4px); box-shadow: none; }
+.adv { position: relative; margin: 0 0 24px; border-radius: 28px; background: linear-gradient(180deg, var(--good-bg), var(--sky-soft) 35%, var(--bg) 60%, var(--good-bg) 85%, var(--sky-soft)); overflow: hidden; }
+.trail { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.trail path { fill: none; vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }
+.trail .road { stroke: var(--line); stroke-width: 22; }
+.trail .dash { stroke: var(--surface); stroke-width: 4; stroke-dasharray: 2 14; }
+.gband { position: absolute; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg); font-weight: 800; padding: 6px 16px; border-radius: 999px; font-size: 1.05rem; white-space: nowrap; z-index: 2; }
+.node { position: absolute; transform: translate(-50%, -50%); width: 84px; height: 84px; border-radius: 50%; border: 4px solid var(--line); background: var(--surface); box-shadow: 0 6px 0 var(--line); display: grid; place-items: center; padding: 0; z-index: 2; }
+.node .nem { font-size: 2.4rem; line-height: 1; }
+.node > b { position: absolute; bottom: -8px; right: -8px; min-width: 32px; height: 32px; padding: 0 6px; border-radius: 999px; background: var(--brand); color: #fff; font-size: 1.05rem; display: grid; place-items: center; border: 3px solid var(--surface); }
+.node .prog { position: absolute; top: -10px; left: -10px; font-style: normal; font-size: .8rem; font-weight: 800; background: var(--sky); color: #fff; border-radius: 999px; padding: 2px 7px; }
+.node .me { position: absolute; top: -40px; font-size: 2.2rem; animation: hop 1.4s ease-in-out infinite; }
+@keyframes hop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+.node.done { background: var(--sun); border-color: #D99A00; box-shadow: 0 6px 0 #D99A00; }
+.node.done > b { background: var(--good); }
+.node.cur { border-color: var(--brand); box-shadow: 0 6px 0 #B85F00, 0 0 0 6px rgba(247, 127, 0, .25); animation: glow 1.8s ease-in-out infinite; }
+@keyframes glow { 50% { box-shadow: 0 6px 0 #B85F00, 0 0 0 12px rgba(247, 127, 0, .12); } }
+.node.lock, .node.soon { filter: grayscale(1); opacity: .55; box-shadow: none; }
+.node.soon { opacity: .4; }
+.node:active { transform: translate(-50%, -46%); }
+.nlabel { position: absolute; transform: translate(-50%, -50%); font-size: .82rem; font-weight: 800; color: var(--muted); max-width: 30%; text-align: center; line-height: 1.1; pointer-events: none; z-index: 1; }
+.tnode { position: absolute; transform: translate(-50%, -50%); font-size: 3rem; line-height: 1; background: var(--surface); border: 3px dashed var(--line); border-radius: 50%; width: 76px; height: 76px; display: grid; place-items: center; padding: 0; filter: grayscale(1); opacity: .5; z-index: 2; }
+.tnode.got { filter: none; opacity: 1; border: 3px solid var(--sun); box-shadow: 0 0 0 6px rgba(255, 183, 3, .3); animation: pop 1.2s ease-in-out infinite; }
+/* level + lesson */
+.lvhead { text-align: center; margin: 4px 0 18px; }
+.lvhead .lvem { font-size: 4.6rem; line-height: 1.05; }
+.lvhead h1 { font-size: clamp(1.7rem, 7vw, 2.2rem); }
+.lvhead p { color: var(--muted); margin: 4px 0 0; font-size: 1.1rem; }
+.row.boss { background: var(--sun); border-color: #D99A00; box-shadow: 0 6px 0 #D99A00; color: #2B2118; margin-bottom: 26px; }
+.row.boss small { color: #5A4A30; }
+.slide { min-height: 42vh; display: grid; place-items: center; align-content: center; gap: 12px; margin: 6px 0; }
+.slide .map { max-width: 100%; }
+.cap { font-size: clamp(1.25rem, 5.4vw, 1.6rem); font-weight: 800; text-align: center; margin: 4px 0 16px; line-height: 1.25; text-wrap: balance; }
+.btn.go { background: var(--good); box-shadow: 0 6px 0 #17643A; color: #fff; }
+.tcount { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: 420px; }
+.tc { position: relative; font-size: clamp(2.6rem, 12vw, 3.3rem); background: var(--surface); border: 3px solid var(--line); border-radius: 18px; width: 1.5em; height: 1.5em; display: grid; place-items: center; padding: 0; line-height: 1; }
+.tc.on { border-color: var(--good); background: var(--good-bg); }
+.tc.on::after { content: attr(data-num); position: absolute; top: -12px; right: -12px; min-width: 32px; height: 32px; border-radius: 999px; background: var(--brand); color: #fff; font-size: 1.1rem; font-weight: 800; display: grid; place-items: center; }
+.bigletter { font-size: clamp(5rem, 26vw, 7rem); font-weight: 800; color: var(--brand); line-height: 1; letter-spacing: .05em; text-align: center; }
+.bignum { font-size: clamp(2.4rem, 11vw, 3.4rem); font-weight: 800; letter-spacing: .08em; text-align: center; line-height: 1.2; color: var(--brand); }
+.slpics { display: flex; gap: 16px; justify-content: center; font-size: clamp(2.8rem, 13vw, 3.6rem); }
+.slpics span { display: grid; justify-items: center; line-height: 1.1; }
+.slpics small { font-size: 1rem; font-weight: 800; color: var(--muted); }
+.pattern { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; font-size: clamp(2.2rem, 10vw, 2.8rem); }
+.pattern .q { border: 3px dashed var(--brand); border-radius: 14px; color: var(--brand); width: 1.3em; text-align: center; font-weight: 800; }
+.b10 { display: flex; gap: 6px; align-items: flex-end; justify-content: center; flex-wrap: wrap; max-width: 420px; }
+.b10 .rod { width: 18px; height: 180px; border-radius: 4px; background: repeating-linear-gradient(180deg, #1D8FB0 0 16px, #0F6C86 16px 18px); }
+.b10 .ones { display: grid; grid-template-columns: repeat(3, 18px); gap: 3px; margin-left: 8px; }
+.b10 .unit { width: 18px; height: 16px; border-radius: 3px; background: #F77F00; }
+.shape-svg { display: block; max-width: 100%; height: auto; }
+.ch .shape-svg { width: 70%; }
+.conts .lbl { font-size: 26px; font-weight: 800; fill: var(--ink); stroke: var(--bg); stroke-width: 5px; paint-order: stroke; text-anchor: middle; dominant-baseline: central; }
+.conts .lbl.sea { fill: var(--sky); font-size: 24px; }
+.conts .ostar { font-size: 56px; text-anchor: middle; dominant-baseline: central; }
+.lstars { font-size: 2.6rem; color: var(--sun); letter-spacing: 4px; margin: -6px 0 14px; }
+.levelup .burst { font-size: 7.5rem; line-height: 1; display: inline-block; animation: spin 1.4s ease-out, pop 1.6s 1.4s ease-in-out infinite; }
+.levelup h1 { font-size: clamp(2.8rem, 12vw, 3.6rem); color: var(--brand); letter-spacing: .04em; }
+.levelup .won { font-size: 6rem; line-height: 1; animation: spin 1.2s .6s ease-out both; }
+/* trophy room */
+.shelf { background: var(--surface); border: 2px solid var(--line); border-radius: 20px; padding: 12px 14px; margin-bottom: 14px; box-shadow: var(--shadow); }
+.shelf h2 { margin: 0 0 8px; font-size: 1.15rem; }
+.shelf small { color: var(--muted); }
+.shelf-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 6px; border-bottom: 6px solid var(--line); padding-bottom: 8px; }
+.badge { position: relative; width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; font-size: 1.8rem; background: var(--bg); border: 3px solid var(--line); filter: grayscale(1); opacity: .4; }
+.badge b { position: absolute; bottom: -6px; right: -6px; font-size: .75rem; background: var(--muted); color: #fff; border-radius: 999px; min-width: 22px; height: 22px; display: grid; place-items: center; }
+.badge.got { filter: none; opacity: 1; background: var(--sun); border-color: #D99A00; }
+.badge.got b { background: var(--good); }
+.cup { margin-left: auto; font-size: 3rem; filter: grayscale(1); opacity: .3; }
+.cup.got { filter: none; opacity: 1; animation: pop 1.6s ease-in-out infinite; }
 /* Pull to refresh (home-screen app) */
 .ptr { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 8px); z-index: 30; width: 46px; height: 46px; margin-left: -23px; border-radius: 50%; background: var(--surface); border: 2px solid var(--line); box-shadow: 0 2px 10px rgb(0 0 0 / .18); display: grid; place-items: center; font-size: 1.4rem; opacity: 0; pointer-events: none; }
 .ptr span { display: grid; }
@@ -220,8 +293,7 @@ main.swiping { will-change: transform; }
 // ---------- settings ----------
 const KID = "Hamilton", PARENT_NAME = "Papa";
 const ROUND = 5;                 // questions per round and in Today's 5
-const PRACTICE_PER_STAR = 10;    // right on the first try in games (not Today's 5), per day
-const STREAK_EVERY = 5, STREAK_BONUS = 3;  // +3 stars every 5 days in a row
+const STREAK_EVERY = 5;          // streak bonus every 5 days in a row (STREAK_STARS, with the other star amounts in the adventure section)
 const GAMES = [
   { id: "sounds", ico: "🔤", name: "Letter Sounds", sub: "Sounds, blending, reading" },
   { id: "count", ico: "🍎", name: "Counting", sub: "Count things, more and less" },
@@ -234,15 +306,15 @@ const GAMES = [
 ];
 // Must match SHOP_COST in api/db.js.
 const SHOP = [
-  { id: "sticker", em: "🌟", name: "A sticker", stars: 3 },
-  { id: "story", em: "📖", name: "Pick the bedtime story", stars: 5 },
-  { id: "icecream", em: "🍦", name: "Ice cream", stars: 8 },
-  { id: "park", em: "🛝", name: "Trip to the park", stars: 10 },
-  { id: "movie", em: "🍿", name: "Movie night", stars: 12 },
-  { id: "pancakes", em: "🥞", name: "Pancake breakfast", stars: 15 },
-  { id: "toy", em: "🧸", name: "A small toy", stars: 25 },
-  { id: "zoo", em: "🦁", name: "Trip to the zoo", stars: 40 },
-  { id: "bigtoy", em: "🎁", name: "A big toy", stars: 60 },
+  { id: "sticker", em: "🌟", name: "A sticker", stars: 30 },
+  { id: "story", em: "📖", name: "Pick the bedtime story", stars: 50 },
+  { id: "icecream", em: "🍦", name: "Ice cream", stars: 80 },
+  { id: "park", em: "🛝", name: "Trip to the park", stars: 100 },
+  { id: "movie", em: "🍿", name: "Movie night", stars: 120 },
+  { id: "pancakes", em: "🥞", name: "Pancake breakfast", stars: 150 },
+  { id: "toy", em: "🧸", name: "A small toy", stars: 250 },
+  { id: "zoo", em: "🦁", name: "Trip to the zoo", stars: 400 },
+  { id: "bigtoy", em: "🎁", name: "A big toy", stars: 600 },
 ];
 const PRAISE = ["Great job, " + KID + "!", "You got it!", "Awesome!", "Super smart!", "Yes! That's right!", "Wow, nice!", "High five!"];
 const OOPS = ["Oops! Try again.", "Almost! Try another one.", "Not that one. Try again!"];
@@ -274,7 +346,7 @@ function others(list, target, n, near) {
 }
 
 // ---------- state + saving ----------
-const S = { role: "student", space: "his", data: {}, view: "home", round: null, sound: true, api: true };
+const S = { role: "student", space: "his", data: {}, view: "home", round: null, sound: true, api: true, level: 1, lesson: null };
 const PARENT_WRITES = new Set(["grants", "freezes", "redemptions"]);
 try { S.sound = localStorage.getItem("hgt-sound") !== "off"; } catch { /* storage blocked */ }
 const LOCAL = new Set(["localhost", "127.0.0.1", ""]);
@@ -298,7 +370,7 @@ function localLoad() {
 // Answers wait here and go to the server together (end of a round, app hidden, 8 waiting, or after a minute):
 // the free storage plan allows 2,000 writes a month for all the family's apps, so each answer can't be its own write.
 const queue = [];
-const BATCHED = new Set(["answers", "days"]), BATCH_MAX = 60;
+const BATCHED = new Set(["answers", "days", "lessons"]), BATCH_MAX = 60;
 let flushing = false, flushTimer = null;
 function put(c, id, doc) {
   (S.data[c] ||= {})[id] = doc;
@@ -363,24 +435,24 @@ function frozenDays() {
 }
 function tally() {
   const today = dayOf(), days = Object.values(S.data.days || {}), done = new Set(days.map((x) => x.d));
-  let earned = 0, perfect = 0;
-  for (const x of days) { earned += 1; if (x.n === ROUND) { earned += 1; perfect++; } }
-  const per = {};
-  for (const a of Object.values(S.data.answers || {})) if (!a.dl && a.ok) per[a.d] = (per[a.d] || 0) + 1;
-  let practice = 0;
-  for (const k in per) practice += Math.floor(per[k] / PRACTICE_PER_STAR);
-  earned += practice;
+  // Generous on purpose: every right answer (first try) is a star, plus Today's 5, streaks, lessons, levels, and trophies.
+  let earned = 0, perfect = 0, right = 0, rightToday = 0;
+  for (const x of days) { earned += TODAY_STARS; if (x.n === ROUND) { earned += PERFECT_STARS; perfect++; } }
+  for (const a of Object.values(S.data.answers || {})) if (a.ok) { right++; if (a.d === today) rightToday++; }
+  earned += right * STAR_RIGHT;
+  const adv = adventureStars();
+  earned += adv.stars;
   const frozen = frozenDays(), first = [...done].sort()[0];
   let streak = 0, bonus = 0;
   if (first) for (let d = first; d <= today; d = addDay(d, 1)) {
-    if (done.has(d)) { streak++; if (streak % STREAK_EVERY === 0) bonus += STREAK_BONUS; }
+    if (done.has(d)) { streak++; if (streak % STREAK_EVERY === 0) bonus += STREAK_STARS; }
     else if (!frozen.has(d) && d !== today) streak = 0;  // today isn't over yet; frozen days don't count either way
   }
   earned += bonus;
   const grants = Object.values(S.data.grants || {}).reduce((s, g) => s + (g.stars || 0), 0);
   earned += grants;
   const spent = Object.values(S.data.redemptions || {}).filter((r) => r.status !== "cancelled").reduce((s, r) => s + (r.stars || 0), 0);
-  return { earned, spent, balance: earned - spent, streak, bonus, practice, perfect, grants, todayDone: done.has(today), practiceToday: per[today] || 0, frozen };
+  return { earned, spent, balance: earned - spent, streak, bonus, right, rightToday, perfect, grants, adv, todayDone: done.has(today), frozen };
 }
 // Hidden level per game, 1 to 5, replayed from his answers: up at 80% right on the first try, down at 40% (last 10, at least 8 since the last change).
 function levelOf(g) {
@@ -493,7 +565,7 @@ function toast(text) {
 
 // ---------- map data ----------
 const GEO = {};
-const geoFile = { states: "us", countries: "world", flags: "world", sounds: "reading", stories: "reading" };
+const geoFile = { states: "us", countries: "world", flags: "world", continents: "world", oceans: "world", sounds: "reading", stories: "reading" };
 const DATA_URL = { us: "/data/states.json", world: "/data/world.json", reading: "/data/reading.json" };
 async function ensureData(g) {
   const k = geoFile[g];
@@ -674,8 +746,8 @@ function group(em, n, gone = 0) {
 const numCh = (list, unit = "") => list.map((v) => ({ key: String(v), html: v + unit, say: unit === "¢" ? (v === 1 ? "1 cent" : v + " cents") : String(v), kind: "num" }));
 
 const GEN = {
-  count(lv) {
-    const type = pick([["count"], ["count", "count", "after"], ["count", "after", "more"], ["count", "more", "after", "before"], ["count", "more", "after", "before", "skip"]][lv - 1]);
+  count(lv, only) {
+    const type = pick(only || [["count"], ["count", "count", "after"], ["count", "after", "more"], ["count", "more", "after", "before"], ["count", "more", "after", "before", "skip"]][lv - 1]);
     const [em, one, many] = pick(THINGS);
     if (type === "count") {
       const max = [5, 10, 15, 20, 20][lv - 1], n = rnd(lv >= 3 ? 6 : 1, max);
@@ -701,14 +773,14 @@ const GEN = {
       choices: numCh(numChoices(ans, 4, 1, 200, [by, 1, 2 * by])), answer: String(ans), after: `${seq.join(", ")}, ${ans}!` };
   },
 
-  add(lv) {
+  add(lv, only) {
     const [em, one, many] = pick(THINGS);
-    const minus = lv >= 3 && Math.random() < (lv === 3 ? 0.6 : 0.5), pics = lv <= 3 || (lv === 4 && Math.random() < 0.4);
+    const minus = only ? only.includes("minus") && (!only.includes("plus") || Math.random() < 0.5) : lv >= 3 && Math.random() < (lv === 3 ? 0.6 : 0.5), pics = lv <= 3 || (lv === 4 && Math.random() < 0.4);
     const max = [5, 10, 10, 10, 20][lv - 1];
     let a, b, ans;
     if (minus) { a = rnd(3, max); b = rnd(1, a - 1); ans = a - b; } else { a = rnd(1, max - 1); b = rnd(1, max - a); ans = a + b; }
     const choices = numCh(numChoices(ans, lv === 1 ? 3 : 4, 0, max + 3));
-    if (lv === 5 && !minus && Math.random() < 0.35) {  // missing number: 5 + ? = 8
+    if (lv === 5 && !minus && !only && Math.random() < 0.35) {  // missing number: 5 + ? = 8
       return { key: `miss${a}${b}`, prompt: `What number is missing?`, say: `${a} plus what makes ${ans}?`, pic: `<div class="eq">${a} + <u>?</u> = ${ans}</div>`,
         choices: numCh(numChoices(b, 4, 0, max)), answer: String(b), after: `${a} plus ${b} makes ${ans}.` };
     }
@@ -724,9 +796,9 @@ const GEN = {
       pic: `<div class="eq">${a} ${minus ? "−" : "+"} ${b} = <u>?</u></div>`, choices, answer: String(ans), after: `${a} ${minus ? "take away" : "plus"} ${b} is ${ans}.` };
   },
 
-  coins(lv) {
+  coins(lv, only) {
     const labels = lv <= 3;
-    const type = pick([["which", "pennies"], ["name", "pennies", "nickels"], ["value", "mix", "name"], ["more", "mix", "value"], ["mix", "mix", "groups", "more"]][lv - 1]);
+    const type = pick(only || [["which", "pennies"], ["name", "pennies", "nickels"], ["value", "mix", "name"], ["more", "mix", "value"], ["mix", "mix", "groups", "more"]][lv - 1]);
     const ks = ["q", "d", "n", "p"];
     if (type === "which") {
       const k = pick(["p", "n", "d"]), opts = shuffle(["p", "n", "d"]);
@@ -784,11 +856,11 @@ const GEN = {
       after: `It's ${spoken(key)}!${m === 0 && lv <= 2 ? " The long hand points straight up." : ""}` };
   },
 
-  states(lv) {
+  states(lv, only) {
     const all = GEO.us.states, idx = (st) => all.indexOf(st);
     const pools = [all.filter((s) => s.area >= 7500 || ["FL", "NY", "GA"].includes(s.abbr)), all.filter((s) => s.area >= 4000), all.filter((s) => s.area >= 1500 || s.abbr === "HI"), all.filter((s) => s.area >= 800 || s.abbr === "HI"), all];
     const findPool = [pools[0], pools[0], pools[1], pools[2], all.filter((s) => s.area >= 1000)][lv - 1];
-    const type = pick([["which"], ["which", "find"], ["which", "shape", "find"], ["which", "shape", "capital", "find"], ["which", "capital", "nick", "abbr", "find", "shape"]][lv - 1]);
+    const type = pick(only || [["which"], ["which", "find"], ["which", "shape", "find"], ["which", "shape", "capital", "find"], ["which", "capital", "nick", "abbr", "find", "shape"]][lv - 1]);
     const pool = pools[lv - 1], n = lv === 1 ? 2 : 3, near = lv >= 4;
     if (type === "find") {
       const st = pick(findPool);
@@ -813,9 +885,9 @@ const GEN = {
       pic: type === "shape" ? shapeOf(st) : usMap({ hl: idx(st) }), choices: nameCh, answer: st.abbr, after: `That's ${st.name}! Its capital is ${st.capital}.` };
   },
 
-  flags(lv) {
+  flags(lv, only) {
     const all = GEO.world.countries, famous = all.filter((c) => FAMOUS.includes(c.iso));
-    const type = pick([["find"], ["name"], ["find", "name"], ["find", "name"], ["name", "capital", "where"]][lv - 1]);
+    const type = pick(only || [["find"], ["name"], ["find", "name"], ["find", "name"], ["name", "capital", "where"]][lv - 1]);
     const pool = lv <= 2 ? famous : all, n = lv <= 2 ? 2 : 3, c = pick(pool);
     const similar = lv >= 4 ? shuffle(LOOKALIKE.filter((g) => g.includes(c.iso)).flat().filter((iso) => iso !== c.iso)).map((iso) => all.find((x) => x.iso === iso)).filter(Boolean) : [];
     const wrong = [...new Set([...similar, ...others(pool, c, n)])].filter((x) => x !== c).slice(0, n), opts = shuffle([c, ...wrong]);
@@ -835,9 +907,9 @@ const GEN = {
       choices: opts.map((o) => ({ key: o.iso, html: o.name, say: o.name, kind: "text" })), answer: c.iso, after: `Yes, that's ${the(c.name)}! It's in ${c.cont}.` };
   },
 
-  sounds(lv) {
+  sounds(lv, only) {
     const r = R(), known = r.sounds.slice(0, [6, 12, 20, 26, 29][lv - 1]).filter((x) => x.k !== "x"), withPics = known.filter((x) => x.pics.length);
-    const type = pick([["letter", "letter", "first"], ["letter", "first", "first", "blend"], ["first", "blend", "blend", "letter"], ["blend", "read", "read", "first"], ["read", "word", "missing", "blend", "letter"]][lv - 1]);
+    const type = pick(only || [["letter", "letter", "first"], ["letter", "first", "first", "blend"], ["first", "blend", "blend", "letter"], ["blend", "read", "read", "first"], ["read", "word", "missing", "blend", "letter"]][lv - 1]);
     const letterCh = (list) => list.map((x) => ({ key: x.k, html: esc(x.k), kind: "letter", say: "" }));
     const notLike = (k) => known.filter((x) => x.k !== k && !sameSound(x.k, k));
     if (type === "letter") {
@@ -875,10 +947,10 @@ const GEN = {
       choices: opts.map(([x]) => ({ key: x, html: esc(x), kind: "word", say: "" })), answer: w, after: `${cap(w)}!`, afterClips: soundOut(w, 0.3) };
   },
 
-  countries(lv) {
+  countries(lv, only) {
     const all = GEO.world.countries, idx = (c) => all.indexOf(c);
     const huge = all.filter((c) => c.area >= 2400), big = all.filter((c) => c.area >= 700), mid = all.filter((c) => c.area >= 190);
-    const type = pick([["which"], ["which", "find"], ["which", "continent", "find"], ["continent", "capital", "which", "find"], ["which", "capital", "continent", "find"]][lv - 1]);
+    const type = pick(only || [["which"], ["which", "find"], ["which", "continent", "find"], ["continent", "capital", "which", "find"], ["which", "capital", "continent", "find"]][lv - 1]);
     if (type === "find") {
       const c = pick(lv <= 3 ? huge : big);
       return { key: `wf${c.iso}`, tap: true, prompt: `Find ${the(c.name)}!`, say: `Can you find ${the(c.name)}? Tap it on the map.`, pic: worldMap({ tap: true }), answer: String(idx(c)),
@@ -938,6 +1010,269 @@ function clockSvg(h, m) {
   return s + `<circle cx="100" cy="100" r="8" fill="#2B2118"/></svg>`;
 }
 
+// ---------- adventure: new question makers ----------
+const SHAPES = {
+  circle: { sides: 0, col: "#E63973", d: '<circle cx="50" cy="50" r="42"/>' },
+  square: { sides: 4, col: "#1D8FB0", d: '<rect x="10" y="10" width="80" height="80" rx="3"/>' },
+  triangle: { sides: 3, col: "#23864A", d: '<polygon points="50,8 94,88 6,88"/>' },
+  rectangle: { sides: 4, col: "#F77F00", d: '<rect x="2" y="24" width="96" height="52" rx="3"/>' },
+  oval: { sides: 0, col: "#8E5CF0", d: '<ellipse cx="50" cy="50" rx="46" ry="30"/>' },
+  star: { sides: null, col: "#FFB703", d: `<polygon points="${Array.from({ length: 10 }, (_, i) => { const r = i % 2 ? 19 : 47, a = Math.PI / 5 * i - Math.PI / 2; return `${(50 + r * Math.cos(a)).toFixed(1)},${(53 + r * Math.sin(a)).toFixed(1)}`; }).join(" ")}"/>` },
+  hexagon: { sides: 6, col: "#2A9D8F", d: '<polygon points="27,8 73,8 97,50 73,92 27,92 3,50"/>' },
+  pentagon: { sides: 5, col: "#C0392B", d: '<polygon points="50,5 95,38 78,93 22,93 5,38"/>' },
+  diamond: { sides: 4, col: "#D35400", d: '<polygon points="50,3 88,50 50,97 12,50"/>' },
+};
+const shapeSvg = (k, size = 1) => `<svg class="shape-svg" viewBox="0 0 100 100" width="${Math.round(92 * size)}" height="${Math.round(92 * size)}" role="img" aria-label="${k}"><g fill="${SHAPES[k].col}">${SHAPES[k].d}</g></svg>`;
+const PATTERN_SETS = [[["🔴", "red"], ["🔵", "blue"], ["🟡", "yellow"], ["🟢", "green"]], [["🍎", "apple"], ["🍌", "banana"], ["🍇", "grapes"], ["🍓", "strawberry"]],
+  [["🐶", "dog"], ["🐱", "cat"], ["🐰", "bunny"], ["🐸", "frog"]], [["⭐", "star"], ["🌙", "moon"], ["☀️", "sun"], ["☁️", "cloud"]]];
+const CONT_COLORS = { "North America": "#E6194B", "South America": "#3CB44B", Europe: "#4363D8", Africa: "#F58231", Asia: "#911EB4", Australia: "#26B5D8", Antarctica: "#9AA3AD" };
+const CONT_FACT = { "North America": "The United States is in North America.", "South America": "Brazil is the biggest country in South America.", Europe: "France, Italy, and Spain are in Europe.",
+  Africa: "Lions, giraffes, and elephants live in Africa.", Asia: "Asia is the biggest continent.", Australia: "Kangaroos live in Australia.", Antarctica: "Antarctica is the coldest place on Earth. Penguins live there!" };
+const OCEAN_FACT = { Pacific: "The Pacific is the biggest and deepest ocean.", Atlantic: "The Atlantic is between the Americas and Europe and Africa.", Indian: "The Indian Ocean is south of India.",
+  Arctic: "The Arctic Ocean is at the top of the world. It's icy!", Southern: "The Southern Ocean goes all the way around Antarctica." };
+// World map with the 7 continents: hl = one continent orange, all = every continent in its color, star = an ocean, labels / oceans = names.
+function contMap(opt = {}) {
+  const { w, h2, conts, neutral, oceans } = GEO.world;
+  let s = `<svg class="map conts${opt.tap ? " tap" : ""}" viewBox="0 0 ${w} ${h2}" role="img" aria-label="World map"><path class="land" d="${neutral}"/>`;
+  conts.forEach((c, i) => { s += `<path data-i="${i}" class="${c.name === opt.hl ? "hl" : ""}" d="${c.d}"${opt.all ? ` style="fill:${CONT_COLORS[c.name]}"` : ""}/>`; });
+  if (opt.labels) conts.forEach((c) => { s += `<text class="lbl" x="${c.c[0]}" y="${c.c[1]}">${c.name}</text>`; });
+  if (opt.oceans) for (const [k, [x, y]] of Object.entries(oceans)) s += `<text class="lbl sea" x="${x}" y="${y}">${k}</text>`;
+  if (opt.star) { const [x, y] = oceans[opt.star]; s += `<text class="ostar" x="${x}" y="${y}">⭐</text>`; }
+  return `<div class="mapbox">${s}</svg></div>`;
+}
+function blocks(n) {
+  const t = Math.floor(n / 10), o = n % 10;
+  return `<div class="b10" aria-label="${n}">${'<span class="rod"></span>'.repeat(t)}<span class="ones">${'<span class="unit"></span>'.repeat(o)}</span></div>`;
+}
+const tensWords = (t, o) => `${plural(t, "ten", "tens")} and ${plural(o, "one", "ones")}`;
+
+Object.assign(GEN, {
+  shapes(lv, only) {
+    const basic = ["circle", "square", "triangle", "rectangle"], all = Object.keys(SHAPES), pool = lv <= 1 ? basic : all;
+    const type = pick(only || [["find", "name"], ["find", "name", "sides"]][Math.min(lv, 2) - 1]);
+    if (type === "sides") {
+      const k = pick(["triangle", "square", "rectangle", "pentagon", "hexagon"]), n = SHAPES[k].sides;
+      return { key: `sides${k}`, prompt: `How many sides does a ${k} have?`, say: `How many sides does a ${k} have? Count them!`, pic: shapeSvg(k, 2),
+        choices: numCh([3, 4, 5, 6]), answer: String(n), after: `A ${k} has ${n} sides and ${n} corners.` };
+    }
+    const k = pick(pool), opts = shuffle([k, ...sample(pool.filter((x) => x !== k && !(SHAPES[x].sides === 0 && SHAPES[k].sides === 0 && lv <= 1)), 2)]);
+    if (type === "find") {
+      return { key: `sf${k}`, prompt: `Which one is a ${k}?`, say: `Which one is a ${k}?`, pic: "",
+        choices: opts.map((o) => ({ key: o, html: shapeSvg(o, 0.85), kind: "pic", say: "" })), answer: k, after: `That's a ${k}!` };
+    }
+    return { key: `sn${k}`, prompt: "What shape is this?", say: `What shape is this? Is it a ${listOf(opts)}?`, pic: shapeSvg(k, 1.9),
+      choices: opts.map((o) => ({ key: o, html: o, say: o, kind: "text" })), answer: k, after: `It's a ${k}!${SHAPES[k].sides ? ` It has ${SHAPES[k].sides} sides.` : ""}` };
+  },
+  pattern(lv) {
+    const set = shuffle(pick(PATTERN_SETS)), unit = pick([["AB"], ["AB", "AAB", "ABB"], ["ABC", "AAB", "ABB"]][Math.min(lv, 3) - 1]);
+    const item = (ch) => set[ch.charCodeAt(0) - 65], shown = unit.length * 2 + rnd(0, unit.length - 1);
+    const seq = Array.from({ length: shown }, (_, i) => item(unit[i % unit.length])), ans = item(unit[shown % unit.length]);
+    const opts = shuffle([...new Set([...unit].map(item)), ...set.filter((x) => ![...unit].map(item).includes(x)).slice(0, 1)]).slice(0, 3);
+    if (!opts.includes(ans)) opts[0] = ans;
+    return { key: `pt${unit}${seq.map((x) => x[0]).join("")}`, prompt: "What comes next?", say: `${seq.map((x) => x[1]).join(", ")}. What comes next?`,
+      pic: `<div class="pattern">${seq.map((x) => `<span>${x[0]}</span>`).join("")}<span class="q">?</span></div>`,
+      choices: shuffle(opts).map((x) => ({ key: x[0], html: x[0], kind: "pic", say: x[1] })), answer: ans[0], after: `${seq.map((x) => x[1]).join(", ")}, ${ans[1]}!` };
+  },
+  continents(lv, only) {
+    const all = GEO.world.conts, type = pick(only || [["which"], ["which", "find"]][Math.min(lv, 2) - 1]);
+    const c = pick(lv <= 1 ? all.filter((x) => x.name !== "Antarctica") : all);
+    if (type === "find") {
+      return { key: `cf${c.name}`, tap: true, prompt: `Find ${c.name}!`, say: `Can you find ${c.name}? Tap it on the map.`, pic: contMap({ tap: true }), answer: String(all.indexOf(c)),
+        tapName: (i) => all[i].name, after: CONT_FACT[c.name] };
+    }
+    const opts = shuffle([c, ...sample(all.filter((x) => x !== c), lv <= 1 ? 2 : 3)]);
+    return { key: `cw${c.name}`, prompt: "Which continent is orange?", say: `Which continent is orange? Is it ${listOf(opts.map((o) => o.name))}?`, pic: contMap({ hl: c.name }),
+      choices: opts.map((o) => ({ key: o.name, html: o.name, say: o.name, kind: "text" })), answer: c.name, after: `That's ${c.name}! ${CONT_FACT[c.name]}` };
+  },
+  oceans() {
+    const names = Object.keys(GEO.world.oceans), o = pick(names), opts = shuffle([o, ...sample(names.filter((x) => x !== o), 2)]);
+    return { key: `oc${o}`, prompt: "Which ocean has the star?", say: `Which ocean has the star? Is it ${listOf(opts.map((x) => `the ${x} Ocean`))}?`, pic: contMap({ all: true, star: o }),
+      choices: opts.map((x) => ({ key: x, html: x, say: `the ${x} Ocean`, kind: "text" })), answer: o, after: OCEAN_FACT[o] };
+  },
+  tens(lv, only) {
+    const n = rnd(11, lv <= 1 ? 49 : 99), t = Math.floor(n / 10), o = n % 10, type = pick(only || [["count"], ["count", "tens", "number"]][Math.min(lv, 2) - 1]);
+    if (type === "tens") {
+      return { key: `tt${n}`, prompt: `How many tens are in ${n}?`, say: `How many tens are in ${n}?`, pic: `<div class="bigtext">${n}</div>`,
+        choices: numCh(numChoices(t, 4, 1, 9)), answer: String(t), after: `${n} is ${tensWords(t, o)}.` };
+    }
+    if (type === "number") {
+      return { key: `tn${n}`, prompt: `What number is ${tensWords(t, o)}?`, say: `What number is ${tensWords(t, o)}?`, pic: "",
+        choices: numCh(numChoices(n, 4, 10, 99, [10, 1, 9, 11])), answer: String(n), after: `${tensWords(t, o)} is ${n}.` };
+    }
+    return { key: `tc${n}`, prompt: "How many blocks?", say: "How many blocks? Count the tens, then the ones.", pic: blocks(n),
+      choices: numCh(numChoices(n, 4, 10, 99, [10, 1, 11, 9])), answer: String(n), after: `${tensWords(t, o)} is ${n}.` };
+  },
+});
+
+// ---------- adventure: levels and lessons ----------
+// Each lesson: a few slides to learn from (tap through, read aloud), then 5 practice questions (p = question maker, level, types).
+// The order follows free, trusted curricula: Common Core K-5 math, the UFLI / CKLA phonics order, and the Core Knowledge Sequence for geography.
+const LESSON_Q = 5, BOSS_Q = 6, BOSS_PASS = 5;
+const STAR_RIGHT = 1, TODAY_STARS = 10, PERFECT_STARS = 10, STREAK_STARS = 30, LESSON_STARS = 3, LEVEL_STARS = 10, TROPHY_STARS = 25, CROWN_STARS = 100;
+const GRADES = [
+  { name: "Kindergarten", trophy: "🏅", tname: "Kindergarten Medal", last: 4 }, { name: "1st Grade", trophy: "🏆", tname: "1st Grade Trophy", last: 8 },
+  { name: "2nd Grade", trophy: "💎", tname: "2nd Grade Diamond", last: 11 }, { name: "3rd Grade", trophy: "🚀", tname: "3rd Grade Rocket", last: 14 },
+  { name: "4th Grade", trophy: "🌟", tname: "4th Grade Superstar", last: 17 }, { name: "5th Grade", trophy: "👑", tname: "Golden Crown", last: 20 },
+];
+const SUBJ = { math: "🔢", read: "🔤", world: "🌎" };
+// Slide makers: html (picture), text (shown and read aloud), clips (recorded reading sounds), count (tap to count).
+const T = {
+  show: (html, text, extra = {}) => ({ html, text, ...extra }),
+  count: (em, n, many) => ({ html: `<div class="tcount">${Array.from({ length: n }, (_, i) => `<button class="tc" data-tc="${i}" aria-label="${many}">${em}</button>`).join("")}</div>`, text: `Tap each one and count!`, count: n, done: `${n} ${many}!` }),
+  sound: (k) => { const x = soundOf(k), up = k[0].toUpperCase() + k.slice(1); return { html: `<div class="bigletter">${up} ${k}</div><div class="slpics">${x.pics.slice(0, 3).map(([w, e]) => `<span>${e}<small>${w}</small></span>`).join("")}</div>`, text: `${k} says /${x.say}/`, clips: [sndItem(k, 0.5), ...x.pics.slice(0, 2).map(([w]) => ({ ...firstA(w, k), gap: 0.4 }))] }; },
+  blend: (w) => ({ html: `${tilesOf(w, false)}<div class="slpics"><span>${R().words.find((x) => x[0] === w)?.[1] || ""}</span></div>`, text: `${graphemes(w).map((g) => g.g).join("-")}… ${w}!`, clips: soundOut(w, 0.5) }),
+  shape: (k, text) => ({ html: shapeSvg(k, 2), text }),
+  cont: (name, text) => ({ html: contMap({ hl: name }), text }),
+};
+const LEVELS = [
+  { n: 1, em: "🌼", name: "Flower Meadow", lessons: [
+    { id: "1a", s: "math", t: "Count to 5", p: { g: "count", lv: 1, only: ["count"] }, slides: () => [
+      T.show(`<div class="bignum">1 2 3 4 5</div>`, "Let's count to 5! One, two, three, four, five."),
+      T.count("🐞", 3, "ladybugs"), T.count("🍎", 5, "apples"),
+      T.show(group("⭐", 4), "One, two, three, four. 4 stars!")] },
+    { id: "1b", s: "math", t: "Circles, squares, triangles", p: { g: "shapes", lv: 1 }, slides: () => [
+      T.shape("circle", "This is a circle. It's round, like a ball."), T.shape("square", "This is a square. It has 4 sides, all the same."),
+      T.shape("triangle", "This is a triangle. It has 3 sides."), T.shape("rectangle", "This is a rectangle. It has 4 sides: 2 long and 2 short.")] },
+    { id: "1c", s: "read", t: "Sounds: m, s, a, t", p: { g: "sounds", lv: 1, only: ["letter", "first"] }, slides: () => ["m", "s", "a", "t"].map(T.sound) },
+    { id: "1d", s: "world", t: "Our country", p: { g: "states", lv: 1, only: ["which"] }, data: "states", slides: () => [
+      T.show(usMap(), "This is the United States of America. It has 50 states!"),
+      T.show(`<div class="flagbig">🇺🇸</div>`, "This is the American flag. It has 50 stars, one for each state, and 13 stripes."),
+      T.show(usMap({ hl: GEO.us.states.findIndex((x) => x.abbr === "TX") }), "Texas is a very big state."),
+      T.show(usMap({ hl: GEO.us.states.findIndex((x) => x.abbr === "AK") }), "Alaska is the biggest state of all!"),
+      T.show(usMap({ hl: GEO.us.states.findIndex((x) => x.abbr === "FL") }), "Florida is in the south. It's called the Sunshine State.")] },
+  ] },
+  { n: 2, em: "🍎", name: "Apple Orchard", lessons: [
+    { id: "2a", s: "math", t: "Count to 10", p: { g: "count", lv: 2, only: ["count", "after"] }, slides: () => [
+      T.show(`<div class="bignum">6 7 8 9 10</div>`, "After 5 come 6, 7, 8, 9, and 10!"), T.count("🍓", 7, "strawberries"),
+      T.show(`<div class="nline"><b>6</b><b class="q">7</b><b>8</b></div>`, "What comes after 6? 7!"), T.count("🎈", 10, "balloons")] },
+    { id: "2b", s: "math", t: "Patterns", p: { g: "pattern", lv: 1 }, slides: () => [
+      T.show(`<div class="pattern"><span>🔴</span><span>🔵</span><span>🔴</span><span>🔵</span><span>🔴</span><span>🔵</span></div>`, "Red, blue, red, blue. A pattern repeats again and again."),
+      T.show(`<div class="pattern"><span>🍎</span><span>🍌</span><span>🍎</span><span>🍌</span><span>🍎</span><span class="q">?</span></div>`, "Apple, banana, apple, banana, apple. What comes next? Banana!"),
+      T.show(`<div class="pattern"><span>🐶</span><span>🐶</span><span>🐱</span><span>🐶</span><span>🐶</span><span>🐱</span></div>`, "Dog, dog, cat. Dog, dog, cat. Find the part that repeats!")] },
+    { id: "2c", s: "read", t: "Sounds: p, i, n, f, o", p: { g: "sounds", lv: 2, only: ["letter", "first"] }, slides: () => ["p", "i", "n", "f", "o"].map(T.sound) },
+    { id: "2d", s: "world", t: "The 7 continents", p: { g: "continents", lv: 1 }, data: "continents", slides: () => [
+      T.show(contMap({ all: true }), "Earth has 7 big pieces of land. They're called continents!"),
+      ...["North America", "South America", "Europe", "Africa", "Asia", "Australia", "Antarctica"].map((c) => T.cont(c, `This is ${c}. ${CONT_FACT[c]}`))] },
+  ] },
+  { n: 3, em: "🌊", name: "Sandy Beach", lessons: [
+    { id: "3a", s: "math", t: "Adding", p: { g: "add", lv: 1, only: ["plus"] }, slides: () => [
+      T.show(`<div class="two">${group("🐟", 2)}<span class="plus">+</span>${group("🐟", 1)}</div>`, "2 fish and 1 more fish. That makes 3 fish! 2 plus 1 is 3."),
+      T.show(`<div class="two">${group("🍪", 3)}<span class="plus">+</span>${group("🍪", 2)}</div>`, "3 cookies plus 2 cookies is 5 cookies."),
+      T.show(`<div class="eq">3 + 2 = 5</div>`, "Plus means put together. 3 plus 2 equals 5.")] },
+    { id: "3b", s: "math", t: "More or fewer", p: { g: "count", lv: 4, only: ["more"] }, slides: () => [
+      T.show(`<div class="two">${group("🐶", 5)}<span class="plus">|</span>${group("🐱", 3)}</div>`, "5 dogs and 3 cats. 5 is more than 3, so there are more dogs!"),
+      T.show(`<div class="two">${group("🦆", 2)}<span class="plus">|</span>${group("🐸", 6)}</div>`, "2 ducks and 6 frogs. 2 is fewer than 6. There are fewer ducks.")] },
+    { id: "3c", s: "read", t: "Blend sounds into words", p: { g: "sounds", lv: 3, only: ["blend"] }, slides: () => [
+      T.show(`<div class="bigletter">c a t</div>`, "Say each sound, then put them together fast!", { clips: [{ ...rq("listen"), gap: 0.3 }] }),
+      T.blend("cat"), T.blend("sun"), T.blend("pig")] },
+    { id: "3d", s: "world", t: "The oceans", p: { g: "oceans", lv: 1 }, data: "continents", slides: () => [
+      T.show(contMap({ all: true, oceans: true }), "Oceans are huge and salty. Earth has 5 oceans!"),
+      ...Object.keys(OCEAN_FACT).map((o) => T.show(contMap({ all: true, star: o }), `The star is in the ${o} Ocean. ${OCEAN_FACT[o]}`))] },
+  ] },
+  { n: 4, em: "🦖", name: "Dino Valley", lessons: [
+    { id: "4a", s: "math", t: "Take away", p: { g: "add", lv: 3, only: ["minus"] }, slides: () => [
+      T.show(group("🧁", 5, 2), "5 cupcakes. We eat 2. Now 3 are left! 5 take away 2 is 3."),
+      T.show(group("🎈", 4, 1), "4 balloons. 1 flies away. 3 are left."),
+      T.show(`<div class="eq">5 − 2 = 3</div>`, "Minus means take away. 5 minus 2 equals 3.")] },
+    { id: "4b", s: "math", t: "Coins", p: { g: "coins", lv: 2, only: ["which", "name"] }, slides: () => [
+      T.show(coinsPic(["p"], true, 1.8), "This is a penny. A penny is worth 1 cent."), T.show(coinsPic(["n"], true, 1.8), "This is a nickel. A nickel is worth 5 cents."),
+      T.show(coinsPic(["d"], true, 1.8), "This is a dime. It's small, but it's worth 10 cents!"), T.show(coinsPic(["q"], true, 1.8), "This is a quarter. A quarter is worth 25 cents.")] },
+    { id: "4c", s: "read", t: "Read words", p: { g: "sounds", lv: 4, only: ["read"] }, slides: () => [T.blend("map"), T.blend("dog"), T.blend("bed"), T.blend("bus")] },
+    { id: "4d", s: "world", t: "Flags", p: { g: "flags", lv: 1 }, data: "flags", slides: () => [
+      T.show(`<div class="flagbig">🇺🇸</div>`, "Every country has a flag. This is the flag of the United States."),
+      T.show(`<div class="flagbig">🇨🇦</div>`, "This is Canada's flag. It has a red maple leaf."), T.show(`<div class="flagbig">🇲🇽</div>`, "This is Mexico's flag: green, white, and red, with an eagle."),
+      T.show(`<div class="flagbig">🇯🇵</div>`, "This is Japan's flag. It has a red sun."), T.show(`<div class="flagbig">🇬🇧</div>`, "This is the flag of the United Kingdom.")] },
+  ] },
+  { n: 5, em: "🐝", name: "Busy Bee Garden", lessons: [
+    { id: "5a", s: "math", t: "Count to 20", p: { g: "count", lv: 3, only: ["count", "after", "before"] }, slides: () => [
+      T.show(`<div class="bignum">11 12 13 14 15<br>16 17 18 19 20</div>`, "After 10 come 11, 12, 13, 14, 15, 16, 17, 18, 19, and 20!"), T.count("🐝", 12, "bees"),
+      T.show(`<div class="nline"><b class="q">14</b><b>15</b><b>16</b></div>`, "What comes before 15? 14!")] },
+    { id: "5b", s: "math", t: "Adding to 10", p: { g: "add", lv: 2, only: ["plus"] }, slides: () => [
+      T.show(`<div class="two">${group("🍩", 4)}<span class="plus">+</span>${group("🍩", 3)}</div>`, "4 donuts plus 3 donuts is 7 donuts."),
+      T.show(`<div class="eq">7 + 3 = 10</div>`, "7 plus 3 makes 10. Numbers that make 10 are good friends!"),
+      T.show(`<div class="eq">6 + 4 = 10</div>`, "6 plus 4 makes 10 too!")] },
+    { id: "5c", s: "read", t: "sh, ch, th", p: { g: "sounds", lv: 5, only: ["letter"] }, slides: () => [
+      T.show(`<div class="bigletter">sh ch th</div>`, "Sometimes two letters make one sound!"), ...["sh", "ch", "th"].map(T.sound)] },
+    { id: "5d", s: "world", t: "Find the states", p: { g: "states", lv: 2, only: ["find", "which"] }, data: "states", slides: () => [
+      T.show(usMap({ hl: GEO.us.states.findIndex((x) => x.abbr === "CA") }), "California is on the west coast, next to the Pacific Ocean."),
+      T.show(usMap({ hl: GEO.us.states.findIndex((x) => x.abbr === "NY") }), "New York is in the northeast, by the Atlantic Ocean."),
+      T.show(usMap({ hl: GEO.us.states.findIndex((x) => x.abbr === "TX") }), "Texas is in the south. It's the second biggest state.")] },
+  ] },
+  { n: 6, em: "🚂", name: "Choo-Choo Station", lessons: [
+    { id: "6a", s: "math", t: "Tens and ones", p: { g: "tens", lv: 1 }, slides: () => [
+      T.show(blocks(10), "This is a ten. It's 10 little blocks stuck together."),
+      T.show(blocks(23), "2 tens and 3 ones. 10, 20, then 21, 22, 23. That's 23!"),
+      T.show(blocks(41), "4 tens and 1 one is 41.")] },
+    { id: "6b", s: "math", t: "Clock: o'clock", p: { g: "clock", lv: 1 }, slides: () => [
+      T.show(clockSvg(3, 0), "The short hand shows the hour. It points to 3. The long hand points straight up to 12. It's 3 o'clock!"),
+      T.show(clockSvg(7, 0), "The short hand points to 7. It's 7 o'clock."), T.show(`<div class="digital">7:00</div>`, "A digital clock shows 7 o'clock like this: 7, then 0 0.")] },
+    { id: "6c", s: "read", t: "Missing letters", p: { g: "sounds", lv: 5, only: ["missing", "word"] }, slides: () => [
+      T.show(`<div class="picword"><div class="flagbig">🐱</div><div class="word"><span class="tile q">?</span><span class="tile">a</span><span class="tile">t</span></div></div>`, "What sound does cat start with? /k/. The missing letter is c!", { clips: [{ ...firstQ("cat"), gap: 0.6 }, firstA("cat", "c")] }),
+      T.blend("hat"), T.blend("ten")] },
+    { id: "6d", s: "world", t: "Countries", p: { g: "countries", lv: 1, only: ["which"] }, data: "countries", slides: () => [
+      ...[["US", "This is the United States. That's our country!"], ["BR", "This is Brazil, in South America."], ["CN", "This is China, in Asia. More than a billion people live there!"], ["AU", "This is Australia. It's a country and a continent!"]]
+        .map(([iso, text]) => T.show(worldMap({ hl: GEO.world.countries.findIndex((c) => c.iso === iso) }), text))] },
+  ] },
+  { n: 7, em: "🏕️", name: "Forest Camp", lessons: [
+    { id: "7a", s: "math", t: "Add and take away to 20", p: { g: "add", lv: 5 }, slides: () => [
+      T.show(`<div class="eq">8 + 5 = ?</div>`, "8 plus 5. Start at 8 and count on 5: 9, 10, 11, 12, 13. It's 13!"),
+      T.show(`<div class="eq">15 − 5 = 10</div>`, "15 take away 5 is 10."), T.show(`<div class="eq">4 + <u>?</u> = 9</div>`, "4 plus what makes 9? Count up from 4 to 9. It's 5!")] },
+    { id: "7b", s: "math", t: "Half past", p: { g: "clock", lv: 3 }, slides: () => [
+      T.show(clockSvg(2, 30), "The long hand points down to 6. That means half past. It's half past 2, or 2:30."),
+      T.show(clockSvg(9, 30), "Half past 9. We write it 9:30.")] },
+    { id: "7c", s: "read", t: "Read more words", p: { g: "sounds", lv: 5, only: ["read", "word"] }, slides: () => [T.blend("fox"), T.blend("web"), T.blend("jet"), T.blend("mug")] },
+    { id: "7d", s: "world", t: "Countries and continents", p: { g: "countries", lv: 3, only: ["continent"] }, data: "countries", slides: () => [
+      ...[["JP", "Japan is in Asia."], ["EG", "Egypt is in Africa. It has the pyramids!"], ["FR", "France is in Europe. Paris is its capital."], ["AR", "Argentina is in South America."]]
+        .map(([iso, text]) => T.show(worldMap({ hl: GEO.world.countries.findIndex((c) => c.iso === iso) }), text))] },
+  ] },
+  { n: 8, em: "🐧", name: "Snowy Peak", lessons: [
+    { id: "8a", s: "math", t: "Count by 2s, 5s, and 10s", p: { g: "count", lv: 5, only: ["skip"] }, slides: () => [
+      T.show(`<div class="bignum">2 4 6 8 10</div>`, "Count by 2s: 2, 4, 6, 8, 10!"), T.show(`<div class="bignum">5 10 15 20</div>`, "Count by 5s: 5, 10, 15, 20!"),
+      T.show(`<div class="bignum">10 20 30 40</div>`, "Count by 10s: 10, 20, 30, 40!")] },
+    { id: "8b", s: "math", t: "Counting coins", p: { g: "coins", lv: 3, only: ["value", "mix"] }, slides: () => [
+      T.show(coinsPic(["d", "n", "p", "p"], true, 1.1), "Start with the biggest coin. 10, 15, 16, 17. That's 17 cents!"),
+      T.show(coinsPic(["q", "d"], true, 1.1), "A quarter and a dime: 25, then 35. 35 cents!")] },
+    { id: "8c", s: "math", t: "Shapes and sides", p: { g: "shapes", lv: 2, only: ["sides", "name"] }, slides: () => [
+      T.shape("triangle", "A triangle has 3 sides and 3 corners."), T.shape("pentagon", "A pentagon has 5 sides."), T.shape("hexagon", "A hexagon has 6 sides, like a honeycomb.")] },
+    { id: "8d", s: "world", t: "State capitals", p: { g: "states", lv: 3, only: ["capital"] }, data: "states", slides: () => [
+      ...[["TX", "Austin is the capital of Texas."], ["FL", "Tallahassee is the capital of Florida."], ["CA", "Sacramento is the capital of California."], ["NY", "Albany is the capital of New York. It's not New York City!"]]
+        .map(([ab, text]) => T.show(usMap({ hl: GEO.us.states.findIndex((x) => x.abbr === ab) }), text))] },
+  ] },
+  { n: 9, em: "🏜️", name: "Desert Dunes", soon: "Numbers to 1,000 · vowel teams · maps and map keys" },
+  { n: 10, em: "🎪", name: "Circus Town", soon: "Adding to 100 · money · reading stories" },
+  { n: 11, em: "🌋", name: "Volcano Island", soon: "Time to 5 minutes · graphs · land and water" },
+  { n: 12, em: "🏰", name: "Castle Hill", soon: "Times tables · main idea · countries of Europe" },
+  { n: 13, em: "🐉", name: "Dragon Cave", soon: "Fractions · nouns and verbs · the solar system" },
+  { n: 14, em: "🌌", name: "Star Sky", soon: "Area and perimeter · world flags" },
+  { n: 15, em: "🌴", name: "Jungle River", soon: "Big multiplying · long division · ecosystems" },
+  { n: 16, em: "🐋", name: "Deep Sea", soon: "Adding fractions · ocean life" },
+  { n: 17, em: "🗻", name: "Mountain Top", soon: "Decimals · angles · latitude and longitude" },
+  { n: 18, em: "🛰️", name: "Space Station", soon: "Multiplying fractions · world geography" },
+  { n: 19, em: "🪐", name: "Planet Rings", soon: "Volume · graphs on a grid · the human body" },
+  { n: 20, em: "👑", name: "Crown Castle", soon: "The big review: earn the crown!" },
+];
+const gradeOf = (n) => GRADES.findIndex((g) => n <= g.last);
+const lessonById = (id) => { for (const L of LEVELS) for (const ls of L.lessons || []) if (ls.id === id) return [L, ls]; return [null, null]; };
+const lessonStars = (doc) => !doc ? 0 : doc.n >= LESSON_Q ? 3 : doc.n >= LESSON_Q - 1 ? 2 : 1;
+function levelDone(n, data = S.data) {
+  const L = LEVELS[n - 1], ls = data.lessons || {};
+  return !!L && !!L.lessons && (!!(ls["c" + n] && ls["c" + n].pass) || L.lessons.every((x) => ls[x.id]));
+}
+const unlocked = (n) => n === 1 || levelDone(n - 1) || levelDone(n);
+function currentLevel() { for (const L of LEVELS) if (L.lessons && !levelDone(L.n)) return L.n; const last = LEVELS.filter((L) => L.lessons).pop(); return last.n; }
+// Stars from the Adventure (lessons, levels, trophies), counted from the saved lessons.
+function adventureStars(data = S.data) {
+  let lessons = 0, levels = 0, trophies = 0;
+  for (const [id, d] of Object.entries(data.lessons || {})) if (!id.startsWith("c") && d) lessons++;
+  for (const L of LEVELS) if (levelDone(L.n, data)) levels++;
+  for (const g of GRADES) {
+    const all = LEVELS.filter((L) => L.n <= g.last && L.n > (GRADES[GRADES.indexOf(g) - 1]?.last || 0));
+    if (all.every((L) => levelDone(L.n, data))) trophies += g.last === 20 ? CROWN_STARS : TROPHY_STARS;
+  }
+  return { lessons, levels, stars: lessons * LESSON_STARS + levels * LEVEL_STARS + trophies };
+}
+const gradeDone = (gi) => LEVELS.filter((L) => L.n <= GRADES[gi].last && L.n > (GRADES[gi - 1]?.last || 0)).every((L) => levelDone(L.n));
+
 // ---------- rounds ----------
 async function startRound(mode) {
   const games = mode === "today" ? shuffle(GAMES.map((g) => g.id)).slice(0, ROUND) : Array(ROUND).fill(mode);
@@ -946,11 +1281,12 @@ async function startRound(mode) {
   await nextQuestion();
 }
 async function nextQuestion() {
-  const r = S.round, g = r.games[r.i];
+  // A game is a name (free play: his hidden level) or a lesson spec { g, lv, only }.
+  const r = S.round, spec = r.games[r.i], g = typeof spec === "string" ? spec : spec.g;
   try { await ensureData(g); } catch { toast("The map didn’t load. Check the internet."); S.view = "home"; render(); return; }
-  const lv = levelOf(g);
+  const lv = typeof spec === "string" ? levelOf(g) : spec.lv;
   let q;
-  for (let k = 0; k < 15; k++) { q = GEN[g](lv); if (!r.seen.has(q.key)) break; }
+  for (let k = 0; k < 15; k++) { q = GEN[g](lv, spec.only); if (!r.seen.has(q.key)) break; }
   r.seen.add(q.key);
   Object.assign(q, { g, lv });
   Object.assign(r, { q, tries: 0, solved: false });
@@ -973,7 +1309,7 @@ function choose(key, el) {
     sfx.good(); confetti();
     if (q.clips) speak([lineItem("p-" + PRAISE.indexOf(praise), praise), ...(q.afterClips || [])], 380);
     else say(`${praise} ${q.after || ""}`, 380, "praise");
-    put("answers", uid(), { g: q.g, d: dayOf(), ok: first, lv: q.lv, t: Date.now(), ...(r.mode === "today" ? { dl: 1 } : {}) });
+    put("answers", uid(), { g: q.g, d: dayOf(), ok: first, lv: q.lv, t: Date.now(), ...(r.mode === "today" ? { dl: 1 } : {}), ...(r.lesson ? { ls: r.lesson } : {}) });
     const next = $("#nextBtn");
     next.hidden = false;
     next.textContent = r.i + 1 < r.games.length ? "Next ▶" : "Finish 🎉";
@@ -1001,6 +1337,7 @@ function advance() {
   finishRound();
 }
 function finishRound() {
+  if (S.round.lesson) { finishLesson(); return; }
   const r = S.round, right = r.results.filter(Boolean).length, today = dayOf();
   let firstToday = false;
   if (r.mode === "today" && !(S.data.days || {})[today]) { put("days", today, { d: today, n: right, t: Date.now() }); firstToday = true; }
@@ -1013,10 +1350,162 @@ function finishRound() {
   say(`You did it, ${KID}! You got ${right} right on the first try.${r.summary.gained ? ` You earned ${plural(r.summary.gained, "star", "stars")}!` : ""}`, 600);
 }
 
+// ---------- adventure: lesson flow ----------
+async function needData(ls) {
+  await Promise.all([ensureData(ls.p.g), ls.data ? ensureData(ls.data) : null, ls.s === "read" ? ensureData("sounds") : null]);
+}
+async function openLesson(id) {
+  const [L, ls] = lessonById(id);
+  if (!ls) return;
+  try { await needData(ls); } catch { toast("That didn’t load. Check the internet."); return; }
+  S.level = L.n;
+  S.lesson = { id, i: 0, tapped: new Set(), slides: ls.slides() };
+  S.view = "lesson";
+  render();
+  speakSlide();
+}
+function speakSlide() {
+  const sl = S.lesson.slides[S.lesson.i];
+  if (sl.clips) speak(sl.clips, 200); else say(sl.text, 200);
+}
+async function startLessonRound(id) {
+  const [L, ls] = lessonById(id);
+  try { await needData(ls); } catch { toast("That didn’t load. Check the internet."); return; }
+  S.level = L.n;
+  S.round = { mode: "lesson", lesson: id, lv: L.n, games: Array(LESSON_Q).fill(ls.p), i: 0, results: [], seen: new Set(), before: tally().earned };
+  S.view = "play";
+  await nextQuestion();
+}
+// Level challenge: questions from all of the level's lessons; 5 of 6 right on the first try finishes the level.
+async function startBoss(n) {
+  const L = LEVELS[n - 1];
+  try { await Promise.all(L.lessons.map(needData)); } catch { toast("That didn’t load. Check the internet."); return; }
+  const specs = shuffle([...L.lessons, ...L.lessons].map((x) => x.p)).slice(0, BOSS_Q);
+  S.level = n;
+  S.round = { mode: "boss", lesson: "c" + n, boss: true, lv: n, games: specs, i: 0, results: [], seen: new Set(), before: tally().earned };
+  S.view = "play";
+  await nextQuestion();
+}
+function finishLesson() {
+  const r = S.round, right = r.results.filter(Boolean).length, wasDone = levelDone(r.lv), hadTrophy = gradeDone(gradeOf(r.lv));
+  const old = (S.data.lessons || {})[r.lesson];
+  const doc = { lv: r.lv, n: Math.max(right, old ? old.n || 0 : 0), of: r.games.length, d: dayOf(), t: Date.now() };
+  if (r.boss) doc.pass = right >= BOSS_PASS || !!(old && old.pass);
+  put("lessons", r.lesson, doc);
+  flush();
+  const after = tally();
+  r.summary = { right, gained: after.earned - r.before, levelUp: !wasDone && levelDone(r.lv), trophy: !hadTrophy && gradeDone(gradeOf(r.lv)), first: !old, pass: r.boss ? right >= BOSS_PASS : null };
+  S.view = r.summary.levelUp ? "levelup" : "lessondone";
+  render();
+  if (r.summary.levelUp) {
+    tone([523, 659, 784, 1047, 1319, 1568], 0.18, "triangle", 0.11, 0.14); confetti(140);
+    const L = LEVELS[r.lv - 1], g = GRADES[gradeOf(r.lv)];
+    say(`Level up! You finished level ${r.lv}, ${L.name}!${r.summary.trophy ? ` You won the ${g.tname}!` : ""} You earned ${plural(r.summary.gained, "star", "stars")}!`, 500, "praise");
+  } else {
+    sfx.win(); confetti(60);
+    say(r.boss ? (r.summary.pass ? "You passed the challenge!" : `You got ${right} right. You need ${BOSS_PASS} to pass. Try the lessons, then try again!`)
+      : `Lesson done! You got ${right} right on the first try. You earned ${plural(r.summary.gained, "star", "stars")}!`, 500, "praise");
+  }
+}
+
+// ---------- adventure: views ----------
+// The home screen: a winding trail through Levels 1 to 20, grouped by grade, with a trophy at the end of each grade.
+function mapView(t) {
+  const cur = currentLevel(), XS = [50, 76, 50, 24], items = [], pts = [];
+  let y = 30, k = 0;
+  GRADES.forEach((g, gi) => {
+    items.push(`<div class="gband" style="top:${y}px">${g.name}</div>`);
+    y += 128;  // room for the dino above the first level of the grade
+    for (const L of LEVELS.filter((x) => x.n <= g.last && x.n > (GRADES[gi - 1]?.last || 0))) {
+      const x = XS[k++ % 4], done = levelDone(L.n), open = L.lessons && unlocked(L.n);
+      const cls = done ? "done" : !L.lessons ? "soon" : open ? (L.n === cur ? "cur" : "open") : "lock";
+      const got = L.lessons ? L.lessons.filter((ls) => (S.data.lessons || {})[ls.id]).length : 0;
+      items.push(`<button class="node ${cls}" style="left:${x}%;top:${y}px" data-level="${L.n}" aria-label="Level ${L.n}: ${esc(L.name)}">
+        <span class="nem">${!L.lessons || open || done ? L.em : "🔒"}</span><b>${L.n}</b>${L.n === cur && !done ? `<span class="me">🦖</span>` : ""}
+        ${L.lessons && open && !done ? `<i class="prog">${got}/${L.lessons.length}</i>` : ""}</button>
+        <span class="nlabel" style="left:${x > 50 ? x - 30 : x < 50 ? x + 30 : x + 28}%;top:${y}px">${esc(L.name)}</span>`);
+      pts.push([x, y]);
+      y += 112;
+    }
+    const won = gradeDone(gi);
+    items.push(`<button class="tnode${won ? " got" : ""}" style="left:50%;top:${y - 26}px" data-go="trophies" aria-label="${esc(g.tname)}">${g.trophy}</button>`);
+    pts.push([50, y - 26]);
+    y += 70;
+  });
+  // Smooth trail through every stop (Catmull-Rom curve as Bézier pieces).
+  let d = `M${pts[0][0]} ${pts[0][1]}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+    d += ` C${p1[0] + (p2[0] - p0[0]) / 6} ${p1[1] + (p2[1] - p0[1]) / 6} ${p2[0] - (p3[0] - p1[0]) / 6} ${p2[1] - (p3[1] - p1[1]) / 6} ${p2[0]} ${p2[1]}`;
+  }
+  const L = LEVELS[cur - 1];
+  return `<section class="hello"><span class="wave">👋</span><div><h1>Hi, ${KID}!</h1><p>Level ${cur} · ${esc(L.name)} ${L.em}</p></div></section>
+  <button class="today${t.todayDone ? " done" : ""}" data-go="today"><span class="big">${t.todayDone ? "✅" : "⭐"}</span><span><b>${t.todayDone ? "Today's 5: done!" : "Today's 5"}</b><span>${t.todayDone ? "Play again just for fun" : `5 questions, then ${TODAY_STARS} stars!`}</span></span></button>
+  <div class="quick">
+    <button data-go="games"><span>🎮</span>Games</button><button data-go="stories"><span>📚</span>Stories</button>
+    <button data-go="trophies"><span>🏆</span>Trophies</button><button data-go="rewards"><span>🎁</span>Prizes</button>
+  </div>
+  <h2>🗺️ My adventure</h2>
+  <div class="adv" style="height:${y}px">
+    <svg class="trail" viewBox="0 0 100 ${y}" preserveAspectRatio="none" aria-hidden="true"><path class="road" d="${d}"/><path class="dash" d="${d}"/></svg>
+    ${items.join("")}
+  </div>
+  <div class="rows"><button class="row" data-go="grownups"><span class="ico">🔒</span><span class="txt"><b>Grown-ups</b><small>For ${PARENT_NAME}</small></span></button></div>`;
+}
+function gamesView() {
+  return `<h2 style="margin-top:6px">🎮 Games</h2><p class="storytitle" style="text-align:left;margin-bottom:14px">Play anything you like. Every right answer is a star!</p>
+  <div class="rows">${GAMES.map((g) => { const lv = levelOf(g.id); return `<button class="row" data-go="${g.id}"><span class="ico">${g.ico}</span><span class="txt"><b>${g.name}</b><small>${g.sub}</small></span><span class="lv"><i>${"★".repeat(lv)}${"☆".repeat(5 - lv)}</i>Level ${lv}</span></button>`; }).join("")}</div>`;
+}
+function levelView() {
+  const L = LEVELS[S.level - 1], g = GRADES[gradeOf(L.n)], ls = S.data.lessons || {}, done = levelDone(L.n), boss = ls["c" + L.n];
+  const got = L.lessons.filter((x) => ls[x.id]).length;
+  return `<section class="lvhead"><div class="lvem">${L.em}</div><h1>Level ${L.n}: ${esc(L.name)}</h1><p>${g.name} · ${done ? "Finished! 🎉" : `${got} of ${L.lessons.length} lessons done`}</p></section>
+  <div class="rows">${L.lessons.map((x) => { const st = lessonStars(ls[x.id]); return `<button class="row" data-lesson="${x.id}"><span class="ico">${SUBJ[x.s]}</span><span class="txt"><b>${esc(x.t)}</b><small>${{ math: "Math", read: "Reading", world: "World" }[x.s]}</small></span><span class="lv"><i>${st ? "★".repeat(st) + "☆".repeat(3 - st) : "☆☆☆"}</i>${st ? "Done ✓" : "Start ▶"}</span></button>`; }).join("")}</div>
+  <button class="row boss" data-boss="${L.n}"><span class="ico">⚡</span><span class="txt"><b>Level challenge</b><small>${boss && boss.pass ? "Passed! 🎉" : `Get ${BOSS_PASS} of ${BOSS_Q} right to finish the level fast!`}</small></span></button>`;
+}
+function lessonView() {
+  const l = S.lesson, [, ls] = lessonById(l.id), sl = l.slides[l.i], last = l.i === l.slides.length - 1;
+  const ready = !sl.count || l.tapped.size >= sl.count;
+  return `<div class="playbar"><button class="icon" data-act="quitlesson" aria-label="Stop">✕</button><div class="dots">${l.slides.map((_, i) => `<i class="${i < l.i ? "ok" : ""}${i === l.i ? " cur" : ""}"></i>`).join("")}</div><button class="icon" data-act="hearslide" aria-label="Hear it again">🗣️</button></div>
+  <p class="storytitle">${SUBJ[ls.s]} ${esc(ls.t)}</p>
+  <div class="slide">${sl.html}</div>
+  <p class="cap">${esc(sl.text)}</p>
+  <div class="storynav"><button class="btn soft" data-act="slprev" ${l.i ? "" : "disabled"} aria-label="Back">◀</button><button class="btn" data-act="hearslide">🔊 Hear it</button><button class="btn${last ? " go" : " soft"}" data-act="slnext" ${ready ? "" : "disabled"} aria-label="${last ? "Practice" : "Next"}">${last ? "✏️" : "▶"}</button></div>
+  ${last && ready ? `<button class="next" data-act="slnext" style="margin-top:14px">Let's practice! ✏️</button>` : ""}`;
+}
+function lessonDoneView() {
+  const r = S.round, s = r.summary, L = LEVELS[r.lv - 1];
+  const nextLs = r.boss ? null : L.lessons[L.lessons.findIndex((x) => x.id === r.lesson) + 1];
+  const st = r.boss ? 0 : lessonStars({ n: s.right });
+  return `<section class="done"><span class="star">${r.boss ? (s.pass ? "⚡" : "💪") : st === 3 ? "🌟" : "⭐"}</span>
+  <h1>${r.boss ? (s.pass ? "Challenge passed!" : "Good try!") : "Lesson done!"}</h1>
+  <p>${s.right} of ${r.games.length} right on the first try.</p>
+  ${r.boss ? "" : `<div class="lstars">${"★".repeat(st)}${"☆".repeat(3 - st)}</div>`}
+  ${s.gained ? `<div class="how" style="text-align:center"><div>⭐ <b>+${s.gained} stars!</b></div></div>` : ""}
+  <div class="btns">${nextLs ? `<button class="btn" data-lesson="${nextLs.id}">Next lesson ▶</button>` : `<button class="btn" data-level="${L.n}">Level ${L.n} ▶</button>`}
+  <button class="btn soft" data-${r.boss ? "boss" : "lpractice"}="${r.boss ? L.n : r.lesson}">Try again 🔁</button>
+  <button class="btn soft" data-go="home">My adventure 🗺️</button></div></section>`;
+}
+function levelUpView() {
+  const r = S.round, s = r.summary, L = LEVELS[r.lv - 1], g = GRADES[gradeOf(r.lv)], next = LEVELS[r.lv];
+  return `<section class="done levelup"><div class="burst">${L.em}</div><h1>LEVEL UP!</h1><p>You finished Level ${L.n}: <b>${esc(L.name)}</b>!</p>
+  ${s.trophy ? `<div class="won">${g.trophy}</div><p>You won the <b>${esc(g.tname)}</b>!</p>` : ""}
+  <div class="how" style="text-align:center"><div>⭐ <b>+${s.gained} stars!</b></div></div>
+  <div class="btns">${next && next.lessons ? `<button class="btn" data-level="${next.n}">Go to Level ${next.n} ${next.em}</button>` : `<button class="btn" data-go="home">My adventure 🗺️</button>`}
+  <button class="btn soft" data-go="trophies">Trophy Room 🏆</button></div></section>`;
+}
+function trophiesView(t) {
+  const adv = adventureStars();
+  return `<section class="lvhead"><div class="lvem">🏆</div><h1>Trophy Room</h1><p>${plural(adv.levels, "level", "levels")} done · ${plural(adv.lessons, "lesson", "lessons")} done</p></section>
+  ${GRADES.map((g, gi) => { const lv = LEVELS.filter((L) => L.n <= g.last && L.n > (GRADES[gi - 1]?.last || 0)), won = gradeDone(gi); return `<div class="shelf"><h2>${g.name}</h2><div class="shelf-row">
+    ${lv.map((L) => `<span class="badge${levelDone(L.n) ? " got" : ""}" title="Level ${L.n}: ${esc(L.name)}">${L.em}<b>${L.n}</b></span>`).join("")}
+    <span class="cup${won ? " got" : ""}" title="${esc(g.tname)}">${g.trophy}</span></div><small>${won ? `You won the ${esc(g.tname)}!` : `Finish ${g.name} to win the ${esc(g.tname)}.`}</small></div>`; }).join("")}`;
+}
+
 // ---------- views ----------
 function render() {
   const t = tally();
-  $("#top").hidden = S.view === "play";
+  $("#top").hidden = S.view === "play" || S.view === "lesson";
   $("#starChip").textContent = `⭐ ${t.balance}`;
   $("#streakChip").textContent = `🔥 ${t.streak}`;
   $("#soundBtn").textContent = S.sound ? "🔊" : "🔇";
@@ -1033,25 +1522,19 @@ function render() {
   else if (S.view === "voices") app.innerHTML = voicesView();
   else if (S.view === "stories") app.innerHTML = storiesView();
   else if (S.view === "story") app.innerHTML = storyView();
-  else app.innerHTML = homeView(t);
+  else if (S.view === "games") app.innerHTML = gamesView();
+  else if (S.view === "trophies") app.innerHTML = trophiesView(t);
+  else if (S.view === "level") app.innerHTML = levelView();
+  else if (S.view === "lesson") app.innerHTML = lessonView();
+  else if (S.view === "lessondone") app.innerHTML = lessonDoneView();
+  else if (S.view === "levelup") app.innerHTML = levelUpView();
+  else app.innerHTML = mapView(t);
   if (S.view === "play") renderDots();
   window.scrollTo(0, 0);
+  // On the map, bring his current level into view.
+  if (S.view === "home") { const n = $(".node.cur") || $(".node.open"); if (n && n.getBoundingClientRect().bottom > innerHeight - 40) n.scrollIntoView({ block: "center" }); }
   // Off the home screen, keep one extra history step so Safari's own back swipe goes back one screen, not out of the app.
   if (S.view !== "home" && !(history.state && history.state.hgt)) try { history.pushState({ hgt: 1 }, ""); } catch { /* the browser limits how often this can run */ }
-}
-function homeView(t) {
-  const left = PRACTICE_PER_STAR - (t.practiceToday % PRACTICE_PER_STAR);
-  return `<section class="hello"><span class="wave">👋</span><div><h1>Hi, ${KID}!</h1><p>${t.todayDone ? "You did Today's 5! Play more games?" : "Ready to play?"}</p></div></section>
-  <button class="today${t.todayDone ? " done" : ""}" data-go="today"><span class="big">${t.todayDone ? "✅" : "⭐"}</span><span><b>${t.todayDone ? "Today's 5: done!" : "Today's 5"}</b><span>${t.todayDone ? "Play again just for fun" : "5 questions, then a star!"}</span></span></button>
-  <h2>Games</h2>
-  <div class="rows">${GAMES.map((g) => { const lv = levelOf(g.id); return `<button class="row" data-go="${g.id}"><span class="ico">${g.ico}</span><span class="txt"><b>${g.name}</b><small>${g.sub}</small></span><span class="lv"><i>${"★".repeat(lv)}${"☆".repeat(5 - lv)}</i>Level ${lv}</span></button>`; }).join("")}</div>
-  <h2>Read</h2>
-  <div class="rows"><button class="row" data-go="stories"><span class="ico">📚</span><span class="txt"><b>Stories</b><small>Little books to read with ${PARENT_NAME}</small></span></button></div>
-  <p class="note">🎯 ${left === PRACTICE_PER_STAR && t.practiceToday ? "Bonus star earned! " : ""}${plural(left, "more right answer", "more right answers")} in games for a bonus star.</p>
-  <div class="rows">
-    <button class="row" data-go="rewards"><span class="ico">🎁</span><span class="txt"><b>My stars and prizes</b><small>${plural(t.balance, "star", "stars")} to spend</small></span></button>
-    <button class="row" data-go="grownups"><span class="ico">🔒</span><span class="txt"><b>Grown-ups</b><small>For ${PARENT_NAME}</small></span></button>
-  </div>`;
 }
 function playView() {
   const r = S.round, q = r.q;
@@ -1074,9 +1557,8 @@ function renderDots() {
 function doneView(t) {
   const s = S.round.summary, isToday = S.round.mode === "today";
   const lines = [];
-  if (s.firstToday) lines.push(`⭐ +1 star for Today's 5`);
-  if (s.firstToday && s.right === ROUND) lines.push(`🌟 +1 star: all ${ROUND} right on the first try!`);
-  if (s.gained > (s.firstToday ? 1 + (s.right === ROUND ? 1 : 0) : 0)) lines.push(`🎉 Bonus stars!`);
+  if (s.gained) lines.push(`⭐ <b>+${s.gained} stars!</b>`);
+  if (s.firstToday) lines.push(`✅ Today's 5 done${s.right === ROUND ? ": all right on the first try!" : "!"}`);
   if (s.firstToday && s.streak > 1) lines.push(`🔥 ${s.streak} days in a row!`);
   return `<section class="done"><span class="star">${s.right >= 4 ? "🏆" : "⭐"}</span><h1>You did it, ${KID}!</h1>
   <p>${s.right} of ${ROUND} right on the first try.</p>
@@ -1094,7 +1576,7 @@ function rewardsView(t) {
   ${grants.map((g) => `<p class="note" style="margin:0 0 12px">💌 ${PARENT_NAME} gave you ${plural(g.stars, "special star", "special stars")}: ${esc(g.reason)}</p>`).join("")}
   <h2>Last 2 weeks</h2><div class="cal">${cal.join("")}</div>
   <h2>How to get stars</h2>
-  <div class="how"><div>⭐ Finish Today's 5: <b>1 star</b></div><div>🌟 All 5 right on the first try: <b>+1 star</b></div><div>🎯 ${PRACTICE_PER_STAR} right answers in games in one day: <b>+1 star</b></div><div>🔥 Every ${STREAK_EVERY} days in a row: <b>+${STREAK_BONUS} stars</b></div></div>
+  <div class="how"><div>✅ Every right answer: <b>+${STAR_RIGHT} star</b></div><div>⭐ Finish Today's 5: <b>+${TODAY_STARS} stars</b> (all right: <b>+${PERFECT_STARS} more</b>)</div><div>📘 Finish a lesson: <b>+${LESSON_STARS} stars</b></div><div>🗺️ Finish a level: <b>+${LEVEL_STARS} stars</b></div><div>🏆 Win a trophy: <b>+${TROPHY_STARS} stars</b> (the crown: <b>+${CROWN_STARS}</b>)</div><div>🔥 Every ${STREAK_EVERY} days in a row: <b>+${STREAK_STARS} stars</b></div></div>
   ${reqs.length ? `<h2>My prizes</h2><div class="rows">${reqs.map(([, x]) => { const it = SHOP.find((s) => s.id === x.item) || { em: "🎁", name: x.item }; return `<div class="row"><span class="ico">${it.em}</span><span class="txt"><b>${esc(it.name)}</b><small>${x.stars} ⭐</small></span><span class="tag${x.status === "delivered" ? " good" : ""}">${x.status === "delivered" ? `${PARENT_NAME} gave it! 🎉` : x.status === "cancelled" ? "Stars back" : `Waiting for ${PARENT_NAME}`}</span></div>`; }).join("")}</div>` : ""}
   <h2>Prizes</h2>
   <div class="rows shop">${SHOP.map((s) => `<div class="row"><span class="ico">${s.em}</span><span class="txt"><b>${s.name}</b><small class="price">${s.stars} ⭐</small></span>${kid ? `<button class="mini" data-buy="${s.id}" ${t.balance < s.stars ? "disabled" : ""}>${t.balance < s.stars ? `${s.stars - t.balance} more` : "Get it!"}</button>` : ""}</div>`).join("")}</div>`;
@@ -1148,6 +1630,7 @@ function grownupsView(t) {
   return `<div class="panel"><h2>Prize requests</h2>
     ${open.length ? `<div class="list">${open.map(([id, x]) => { const it = SHOP.find((s) => s.id === x.item) || { em: "🎁", name: x.item }; return `<div class="li"><span class="grow">${it.em} <b>${esc(it.name)}</b> · ${x.stars} ⭐ · ${new Date(x.t).toLocaleDateString()}</span><button class="mini" data-give="${esc(id)}">Given ✓</button><button class="mini soft" data-cancel="${esc(id)}">Cancel</button></div>`; }).join("")}</div>` : `<p>No requests right now.</p>`}
   </div>
+  <div class="panel"><h2>${KID}'s adventure</h2><p>Level ${currentLevel()} · ${t.adv.lessons} lessons and ${t.adv.levels} levels done. Levels 1 to ${LEVELS.filter((L) => L.lessons).length} are ready; the rest are coming.</p></div>
   <div class="panel"><h2>${KID}'s games</h2><p>Level moves up at 80% right on the first try and down at 40%. Stars: ${t.earned} earned, ${t.spent} spent. Streak ${t.streak} days.</p>
     <table><tr><th>Game</th><th class="n">Level</th><th class="n">This week</th><th class="n">All</th><th class="n">Last 20</th></tr>${rows}</table></div>
   <div class="panel"><h2>Give special stars</h2><p>For being kind, trying hard, or anything you like. He sees your reason.</p>
@@ -1178,8 +1661,34 @@ document.addEventListener("click", async (e) => {
       try { await ensureData("stories"); } catch { toast("The stories didn’t load. Check the internet."); return; }
       S.view = "stories"; S.round = null; render(); return;
     }
-    if (v === "home" || v === "rewards" || v === "grownups" || v === "voices") { S.view = v; S.round = null; render(); if (v === "rewards") say(`You have ${plural(tally().balance, "star", "stars")}!`); return; }
+    if (v === "home" || v === "rewards" || v === "grownups" || v === "voices" || v === "games" || v === "trophies") { S.view = v; S.round = null; render(); if (v === "trophies") say(`Your trophy room! You finished ${plural(tally().adv.levels, "level", "levels")}.`); if (v === "rewards") say(`You have ${plural(tally().balance, "star", "stars")}!`); return; }
     startRound(v);
+    return;
+  }
+  const lvb = e.target.closest("[data-level]");
+  if (lvb) {
+    const L = LEVELS[+lvb.dataset.level - 1];
+    if (!L) return;
+    if (!L.lessons) { toast(`Level ${L.n} is coming soon! ${L.soon}`); say(`Level ${L.n}, ${L.name}, is coming soon!`); return; }
+    if (!unlocked(L.n)) { toast(`🔒 Finish Level ${L.n - 1} first!`); say(`Finish level ${L.n - 1} first!`); return; }
+    S.level = L.n; S.view = "level"; S.round = null; render(); say(`Level ${L.n}. ${L.name}!`);
+    return;
+  }
+  const lsb = e.target.closest("[data-lesson],[data-lpractice],[data-boss]");
+  if (lsb) {
+    if (lsb.dataset.lesson) openLesson(lsb.dataset.lesson);
+    else if (lsb.dataset.lpractice) startLessonRound(lsb.dataset.lpractice);
+    else startBoss(+lsb.dataset.boss);
+    return;
+  }
+  const tc = e.target.closest("[data-tc]");
+  if (tc && S.view === "lesson") {
+    const l = S.lesson, sl = l.slides[l.i];
+    if (l.tapped.has(tc.dataset.tc)) return;
+    l.tapped.add(tc.dataset.tc);
+    tc.classList.add("on"); tc.dataset.num = l.tapped.size;
+    say(String(l.tapped.size));
+    if (l.tapped.size >= sl.count) { setTimeout(() => { if (S.view !== "lesson" || S.lesson !== l) return; render(); confetti(20); say(sl.done, 0, "praise"); }, 700); }
     return;
   }
   const story = e.target.closest("[data-story]");
@@ -1206,6 +1715,11 @@ document.addEventListener("click", async (e) => {
     if (a === "repeat") { if (S.round.q.clips) speak(S.round.q.clips); else say(S.round.q.say); }
     if (a === "readpage") { const st = R().stories.find((x) => x.id === S.story.id), i = S.story.page; speak([lineItem(`t-${st.id}-${i}`, st.pages[i][0])]); }
     if (a === "soundout") speak(S.round.q.sounds.map((g) => sndItem(g.k, 0.45)));
+    if (a === "quitlesson") { S.view = "level"; S.lesson = null; render(); }
+    if (a === "hearslide") speakSlide();
+    if (a === "slprev" && S.lesson.i > 0) { S.lesson.i--; S.lesson.tapped = new Set(); render(); speakSlide(); }
+    if (a === "slnext") { if (S.lesson.i + 1 < S.lesson.slides.length) { S.lesson.i++; S.lesson.tapped = new Set(); render(); speakSlide(); } else startLessonRound(S.lesson.id); }
+    if (a === "quit" && S.round.lesson) { S.view = "level"; S.round = null; render(); return; }
     if (a === "quit") { if (S.round.mode === "today" && S.round.results.length) modal(`<span class="em">🛑</span><h2>Stop Today's 5?</h2>`, () => { S.view = "home"; S.round = null; render(); }); else { S.view = "home"; S.round = null; render(); } }
     if (a === "logout") modal(`<span class="em">👋</span><h2>Log out?</h2>`, async () => { await fetch("/api/logout", { method: "POST" }).catch(() => {}); location.href = "/login"; });
     if (a === "cleartest") modal(`<span class="em">🧪</span><h2>Clear all test data?</h2>`, async () => { await fetch("/api/db", { method: "DELETE" }); location.reload(); });
@@ -1294,14 +1808,14 @@ paintTheme();
 // The home-screen app has no back swipe or pull-to-refresh of its own, so the app adds them.
 // Swipe from the left edge: back one screen (not during a game; the ✕ button does that). Swipe sideways on a story: turn the page.
 // Pull down at the top: refresh (not during a game). In Safari, its own back swipe goes back one screen.
-const BACK = { done: "home", rewards: "home", grownups: "home", voices: "grownups", stories: "home", story: "stories" };
+const BACK = { done: "home", rewards: "home", grownups: "home", voices: "grownups", stories: "home", story: "stories", games: "home", trophies: "home", level: "home", lesson: "level", lessondone: "level", levelup: "home" };
 const EDGE = 28;
 const standalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
 const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 function goBack() {
   const to = BACK[S.view];
   if (!to) return false;
-  if (S.view === "done") S.round = null;
+  if (S.view === "done" || S.view === "lessondone" || S.view === "levelup") S.round = null;
   S.view = to; render();
   return true;
 }
@@ -1379,7 +1893,7 @@ document.addEventListener("touchcancel", () => endGesture(true));
   try {
     const j = await load();
     Object.assign(S, { role: j.role, space: j.space, data: j.data || {} });
-    for (const c of ["answers", "days", "redemptions", "grants", "freezes"]) S.data[c] ||= {};
+    for (const c of ["answers", "days", "redemptions", "grants", "freezes", "lessons"]) S.data[c] ||= {};
     render();
     loadClipIndex();
     if (S.api) { ensureData("states").catch(() => {}); ensureData("countries").catch(() => {}); ensureData("sounds").catch(() => {}); }
