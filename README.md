@@ -100,3 +100,4 @@ Same as SAT Daily Ten, no framework, no build step: `index.html` (the whole app)
 ## Coins and blocks (2026-11-14)
 - Coin lessons: 12 lessons (added "Can I buy it?" and "Coin review"), 8 practice questions each (review: 10), tap-to-count coin pages (`T.coins`: tap biggest first, running total shows on each coin). New coin question type "buy". A lesson's practice length is `n` (7th LS argument); stars and passing go by the share right (3 stars at 85%, passed at 75%).
 - Base-ten blocks are one SVG (`baseTen`): hundreds, tens, ones always on one line, shrinking to fit the phone.
+- Coin pictures (`coins/p.png`, `n.png`, `d.png`, `q.png`): real U.S. Mint coin images, public domain, from Wikimedia Commons ("US One Cent Obv.png", "Jefferson-Nickel-Unc-Obv.jpg", "Dime Obverse 13.png", "2006 Quarter Proof.png"), trimmed to round 240 px PNGs. `coinSvg()` shows them at real relative size, with a small value tag on easier levels.
