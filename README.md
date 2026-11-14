@@ -96,3 +96,7 @@ Same as SAT Daily Ten, no framework, no build step: `index.html` (the whole app)
 ## "Did you know?" and longer geography lessons
 - After a right answer about a state, country, flag, continent, or single coin, a "Did you know?" card shows more (capital, nickname, region, language, a fun fact) and the voice reads the fact. `factFor()` in index.html; fact banks STATE_FACT (50), COUNTRY_FACT (65, [language, fact]), CONT_MORE, COIN_FACT.
 - Geography lessons are tours built from the same banks: "Our country" (Level 1 and 50 States topic) has 14 pages; each region lesson visits every state in it; country and flag lessons visit up to 10 countries per continent (TOUR); capitals and nicknames tours have 10-12 states.
+
+## Coins and blocks (2026-11-14)
+- Coin lessons: 12 lessons (added "Can I buy it?" and "Coin review"), 8 practice questions each (review: 10), tap-to-count coin pages (`T.coins`: tap biggest first, running total shows on each coin). New coin question type "buy". A lesson's practice length is `n` (7th LS argument); stars and passing go by the share right (3 stars at 85%, passed at 75%).
+- Base-ten blocks are one SVG (`baseTen`): hundreds, tens, ones always on one line, shrinking to fit the phone.

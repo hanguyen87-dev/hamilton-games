@@ -238,6 +238,9 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
 .tcount { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: 420px; }
 .tc { position: relative; font-size: clamp(2.6rem, 12vw, 3.3rem); background: var(--surface); border: 3px solid var(--line); border-radius: 18px; width: 1.5em; height: 1.5em; display: grid; place-items: center; padding: 0; line-height: 1; }
 .tc.on { border-color: var(--good); background: var(--good-bg); }
+.tc.coin { width: auto; height: auto; padding: 8px; border-radius: 50%; font-size: 1rem; }
+.tc.coin.on::after { min-width: 44px; font-size: 1rem; }
+.price { font-size: .5em; font-weight: 800; background: var(--sun); color: #2B2118; border-radius: 12px; padding: 2px 10px; vertical-align: middle; }
 .tc.on::after { content: attr(data-num); position: absolute; top: -12px; right: -12px; min-width: 32px; height: 32px; border-radius: 999px; background: var(--brand); color: #fff; font-size: 1.1rem; font-weight: 800; display: grid; place-items: center; }
 .bigletter { font-size: clamp(5rem, 26vw, 7rem); font-weight: 800; color: var(--brand); line-height: 1; letter-spacing: .05em; text-align: center; }
 .bignum { font-size: clamp(2.4rem, 11vw, 3.4rem); font-weight: 800; letter-spacing: .08em; text-align: center; line-height: 1.2; color: var(--brand); }
@@ -246,10 +249,10 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
 .slpics small { font-size: 1rem; font-weight: 800; color: var(--muted); }
 .pattern { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; font-size: clamp(2.2rem, 10vw, 2.8rem); }
 .pattern .q { border: 3px dashed var(--brand); border-radius: 14px; color: var(--brand); width: 1.3em; text-align: center; font-weight: 800; }
-.b10 { display: flex; gap: 6px; align-items: flex-end; justify-content: center; flex-wrap: wrap; max-width: 420px; }
-.b10 .rod { width: 18px; height: 180px; border-radius: 4px; background: repeating-linear-gradient(180deg, #1D8FB0 0 16px, #0F6C86 16px 18px); }
-.b10 .ones { display: grid; grid-template-columns: repeat(3, 18px); gap: 3px; margin-left: 8px; }
-.b10 .unit { width: 18px; height: 16px; border-radius: 3px; background: #F77F00; }
+.b10 { display: block; height: auto; margin: 0 auto; }
+.b10 .bt { fill: #1D8FB0; }
+.b10 .bo { fill: #F77F00; }
+.b10 line { stroke: #0F6C86; stroke-width: .6; }
 .shape-svg { display: block; max-width: 100%; height: auto; }
 .ch .shape-svg { width: 70%; }
 .conts .lbl { font-size: 26px; font-weight: 800; fill: var(--ink); stroke: var(--bg); stroke-width: 5px; paint-order: stroke; text-anchor: middle; dominant-baseline: central; }
@@ -271,7 +274,6 @@ td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
 .week { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 460px; }
 .week span { background: var(--surface); border: 2px solid var(--line); border-radius: 12px; padding: 6px 10px; font-weight: 800; }
 /* grades 2-5 pictures */
-.b10 .flat { width: 62px; height: 62px; border-radius: 4px; background: #1D8FB0; background-image: linear-gradient(#0F6C86 1.5px, transparent 1.5px), linear-gradient(90deg, #0F6C86 1.5px, transparent 1.5px); background-size: 6.2px 6.2px; margin-right: 4px; }
 .pairs { display: grid; grid-template-columns: repeat(2, auto); gap: 4px 10px; justify-content: center; font-size: 1.8rem; max-height: 46vh; overflow: hidden; grid-auto-flow: row; }
 .arr { display: grid; grid-template-columns: repeat(var(--c), auto); gap: 4px 8px; justify-content: center; font-size: clamp(1.6rem, 7vw, 2.2rem); }
 .fr { display: inline-flex; flex-direction: column; align-items: center; line-height: 1; vertical-align: middle; font-weight: 800; }
@@ -884,6 +886,15 @@ const GEN = {
         choices: opts.map(([k2, list]) => ({ key: k2, html: coinsPic(list, labels, 0.75), kind: "pic", say: "" })), answer: opts.find((o) => o[1] === good)[0],
         after: `${good.map((x) => COIN[x].name).join(", ")}: that's ${cents(target)}!` };
     }
+    if (type === "buy") {
+      const [em, it] = pick([["🍪", "cookie"], ["🧃", "juice box"], ["🍎", "apple"], ["✏️", "pencil"], ["🎈", "balloon"], ["🍭", "lollipop"]]);
+      const list = coinSet(Math.max(3, lv)), total = sum(list), price = Math.max(1, total + pick([-10, -5, -2, 0, 3, 5, 10]));
+      const ok = total >= price;
+      return { key: `buy${list.join("")}${price}`, prompt: `The ${it} costs ${price}¢. Do you have enough?`, say: `The ${it} costs ${cents(price)}. Count your coins. Do you have enough money?`,
+        pic: `<div class="flagbig">${em} <span class="price">${price}¢</span></div>${coinsPic(list, labels, 0.9)}`,
+        choices: [{ key: "yes", html: "Yes, enough!", say: "yes", kind: "text" }, { key: "no", html: "No, not enough", say: "no", kind: "text" }], answer: ok ? "yes" : "no",
+        after: `You have ${cents(total)}. ${ok ? (total === price ? "That's exactly enough!" : `That's enough, with ${cents(total - price)} left over.`) : `You need ${cents(price - total)} more.`}` };
+    }
     if (type === "dollar") {
       const k = pick(["q", "d", "n", "p"]), n = 100 / COIN[k].v;
       if (Math.random() < 0.4) {
@@ -1165,10 +1176,25 @@ function contMap(opt = {}) {
   if (opt.star) { const [x, y] = oceans[opt.star]; s += `<text class="ostar" x="${x}" y="${y}">⭐</text>`; }
   return `<div class="mapbox">${s}</svg></div>`;
 }
-function blocks(n) {
-  const t = Math.floor(n / 10), o = n % 10;
-  return `<div class="b10" aria-label="${n}">${'<span class="rod"></span>'.repeat(t)}<span class="ones">${'<span class="unit"></span>'.repeat(o)}</span></div>`;
+// Base-ten blocks drawn as one picture: hundreds, then tens, then ones, always on one line (it shrinks to fit a phone).
+function baseTen(n) {
+  const h = Math.floor(n / 100), t = Math.floor(n / 10) % 10, o = n % 10, u = 7, side = 10 * u;
+  let x = 0, s = "";
+  for (let i = 0; i < h; i++, x += side + 6) {
+    s += `<rect x="${x}" y="0" width="${side}" height="${side}" rx="1.5" class="bt"/>`;
+    for (let k = 1; k < 10; k++) s += `<line x1="${x + k * u}" y1="0" x2="${x + k * u}" y2="${side}"/><line x1="${x}" y1="${k * u}" x2="${x + side}" y2="${k * u}"/>`;
+  }
+  if (h && (t || o)) x += 8;
+  for (let i = 0; i < t; i++, x += u + 5) {
+    s += `<rect x="${x}" y="0" width="${u}" height="${side}" rx="1.5" class="bt"/>`;
+    for (let k = 1; k < 10; k++) s += `<line x1="${x}" y1="${k * u}" x2="${x + u}" y2="${k * u}"/>`;
+  }
+  if (t && o) x += 8;
+  for (let i = 0; i < o; i++) s += `<rect x="${x + Math.floor(i / 5) * (u + 3)}" y="${side - u - (i % 5) * (u + 3)}" width="${u}" height="${u}" rx="1.5" class="bo"/>`;  // ones in stacks of 5
+  const W = Math.max(u, o ? x + Math.ceil(o / 5) * (u + 3) : x - 5);
+  return `<svg class="b10" viewBox="-2 -2 ${W + 4} ${side + 4}" style="width:min(100%, ${Math.round((W + 4) * 2.6)}px)" role="img" aria-label="${n}">${s}</svg>`;
 }
+const blocks = baseTen;
 const tensWords = (t, o) => `${plural(t, "ten", "tens")} and ${plural(o, "one", "ones")}`;
 
 Object.assign(GEN, {
@@ -1246,10 +1272,7 @@ function nearNums(ans, steps, n = 4, lo = 0) {
   for (let k = 1; set.size < n; k++) set.add(ans + k * (steps[0] || 1));
   return [...set].sort((a, b) => a - b);
 }
-function hundreds(n) {
-  const h = Math.floor(n / 100), t = Math.floor(n / 10) % 10, o = n % 10;
-  return `<div class="b10">${'<span class="flat"></span>'.repeat(h)}${'<span class="rod"></span>'.repeat(t)}<span class="ones">${'<span class="unit"></span>'.repeat(o)}</span></div>`;
-}
+const hundreds = baseTen;
 function fracPic(n, d, kind = d <= 4 && Math.random() < 0.5 ? "pie" : "bar") {
   const col = "#F77F00";
   if (kind === "pie") {
@@ -1627,6 +1650,9 @@ const SUBJ = { math: "🔢", read: "🔤", world: "🌎" };
 const T = {
   show: (html, text, extra = {}) => ({ html, text, ...extra }),
   count: (em, n, many) => ({ html: `<div class="tcount">${Array.from({ length: n }, (_, i) => `<button class="tc" data-tc="${i}" aria-label="${many}">${em}</button>`).join("")}</div>`, text: `Tap each one and count!`, count: n, done: `${n} ${many}!` }),
+  // Tap each coin (biggest first) and the running total shows on it: 25, 35, 40, 41.
+  coins: (list, text) => { const ks = list.slice().sort((a, b) => COIN[b].v - COIN[a].v); return { html: `<div class="tcount">${ks.map((k, i) => `<button class="tc coin" data-tc="${i}" data-v="${COIN[k].v}" aria-label="${COIN[k].name}">${coinSvg(k, true, 1)}</button>`).join("")}</div>`,
+    text: text || "Tap each coin to count. Start with the biggest!", count: ks.length, done: `That's ${cents(sum(ks))}!` }; },
   sound: (k) => { const x = soundOf(k), up = k[0].toUpperCase() + k.slice(1); return { html: `<div class="bigletter">${up} ${k}</div><div class="slpics">${x.pics.slice(0, 3).map(([w, e]) => `<span>${e}<small>${w}</small></span>`).join("")}</div>`, text: `${k} says ${slash(k)}`, clips: [sndItem(k, 0.5), ...x.pics.slice(0, 2).map(([w]) => ({ ...firstA(w, k), gap: 0.4 }))] }; },
   blend: (w) => ({ html: `${tilesOf(w, false)}<div class="slpics"><span>${R().words.find((x) => x[0] === w)?.[1] || ""}</span></div>`, text: `${graphemes(w).map((g) => g.g).join("-")}… ${w}!`, clips: soundOut(w, 0.5) }),
   shape: (k, text) => ({ html: shapeSvg(k, 2), text }),
@@ -1912,7 +1938,8 @@ function lessonById(id) {
   for (const t of TOPICS) for (const ls of t.lessons) if (typeof ls !== "string" && ls.id === id) return [null, ls];
   return [null, null];
 }
-const lessonStars = (doc) => !doc ? 0 : doc.n >= LESSON_Q ? 3 : doc.n >= LESSON_Q - 1 ? 2 : 1;
+// Stars and passing go by the share right on the first try, since lessons can have 5 or more practice questions.
+const lessonStars = (doc) => { if (!doc) return 0; const f = doc.n / (doc.of || LESSON_Q); return f >= 0.85 ? 3 : f >= 0.7 ? 2 : 1; };
 function levelDone(n, data = S.data) {
   const L = LEVELS[n - 1], ls = data.lessons || {};
   // Done by: the placement quiz, the level challenge, or every lesson (an Adventure lesson also counts when its library lessons are passed).
@@ -1936,7 +1963,7 @@ const gradeDone = (gi) => LEVELS.filter((L) => L.n <= GRADES[gi].last && L.n > (
 // ---------- lesson library: pick a topic, then Learn (lessons) or Play (the game) ----------
 // Each topic is a list of lessons, easy to hard. Some are the Adventure's own lessons (listed by id); the rest live only here.
 // Facts: U.S. Mint (coins), U.S. Census Bureau (regions), CIA World Factbook (countries, capitals, flags). Order: Common Core and the Core Knowledge Sequence.
-const PASS_N = 4;  // a lesson is "passed" with 4 of 5 right on the first try; passed library lessons count for the Adventure (LIB)
+const PASS_N = 4;  // a lesson is "passed" with 4 of 5 (75%) right on the first try; passed library lessons count for the Adventure (LIB)
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const SEASONS = [["winter", "⛄", "It's cold, and it might snow!"], ["spring", "🌷", "Flowers bloom and baby animals are born."],
@@ -1985,7 +2012,7 @@ const hlCountry = (iso, zoom = true) => worldMap({ hl: GEO.world.countries.findI
 const regionMap = (r) => usMap({ hls: GEO.us.states.map((st, i) => (REGION[st.abbr] === r ? i : -1)).filter((i) => i >= 0) });
 const regionNames = (r) => listOf(GEO.us.states.filter((st) => REGION[st.abbr] === r).map((st) => st.name)).replace(", or ", ", and ");
 const contIsos = (cont) => GEO.world.countries.filter((c) => c.cont.includes(cont)).sort((a, b) => b.area - a.area).map((c) => c.iso);
-const LS = (id, s, t, p, slides, data) => ({ id, s, t, p, slides, data });
+const LS = (id, s, t, p, slides, data, n) => ({ id, s, t, p, slides, data, n });  // n = practice questions (default LESSON_Q)
 // Region lessons visit every state in the region: where it is, its capital, and a fact.
 function regionLesson(n, r, intro) {
   return LS(`states.${n}`, "world", `The ${r}`, { g: "states", lv: 5, only: ["which", "find"], opts: { region: r } }, () => [
@@ -2109,39 +2136,71 @@ const usTour = () => [
 
 const TOPICS = [
   { id: "coins", game: "coins", ico: "🪙", name: "Coins", lessons: [
-    LS("coins.1", "math", "Penny and nickel", { g: "coins", lv: 2, only: ["which", "name"] }, () => [
+    // Coin lessons: teaching pages, tap-to-count coins, then 8 practice questions (the 8 at the end of each LS).
+    LS("coins.1", "math", "Penny and nickel", { g: "coins", lv: 2, only: ["which", "name", "value"] }, () => [
       T.show(coinsPic(["p"], true, 1.8), "This is a penny. It's worth 1 cent. It's copper colored, and Abraham Lincoln is on it."),
-      T.show(coinsPic(["n"], true, 1.8), "This is a nickel. It's worth 5 cents. Thomas Jefferson is on it."),
-      T.show(coinsPic(["n", "p", "p", "p", "p", "p"], true, 1.1), "A nickel is bigger than a penny, and worth more. 5 pennies make a nickel!"),
-      T.show(coinsPic(["p"], true, 1.8), COIN_FACT.p), T.show(coinsPic(["n"], true, 1.8), COIN_FACT.n),
-      T.show(`<div class="flagbig">🏛️</div>`, "Fun fact: the United States made its last new pennies in 2025. The pennies we have still work as money!")]),
-    LS("coins.2", "math", "Dime and quarter", { g: "coins", lv: 4, only: ["name", "value"] }, () => [
+      T.show(coinsPic(["p"], true, 1.8), COIN_FACT.p),
+      T.show(coinsPic(["n"], true, 1.8), "This is a nickel. It's worth 5 cents. It's silver colored, and Thomas Jefferson is on it."),
+      T.show(coinsPic(["n"], true, 1.8), COIN_FACT.n),
+      T.show(coinsPic(["n", "p"], true, 1.6), "A nickel is bigger than a penny, and it's worth more: 5 cents is more than 1 cent."),
+      T.coins(["p", "p", "p", "p", "p"], "5 pennies. Tap each one and count!"),
+      T.show(coinsPic(["n", "p", "p", "p", "p", "p"], true, 1.1), "5 pennies are worth the same as 1 nickel!"),
+      T.show(`<div class="flagbig">🏛️</div>`, "Fun fact: the United States made its last new pennies in 2025. The pennies we have still work as money!")], null, 8),
+    LS("coins.2", "math", "Dime and quarter", { g: "coins", lv: 4, only: ["name", "value", "which"] }, () => [
       T.show(coinsPic(["d"], true, 1.8), "This is a dime. It's worth 10 cents. It's the smallest coin, but it's worth more than a penny or a nickel!"),
-      T.show(coinsPic(["q"], true, 1.8), "This is a quarter. It's worth 25 cents."),
+      T.show(coinsPic(["d", "n"], true, 1.6), "2 nickels make a dime: 5 and 5 is 10."),
+      T.show(coinsPic(["q"], true, 1.8), "This is a quarter. It's worth 25 cents. It's the biggest of these coins."),
       T.show(coinsPic(["d", "q", "p", "n"], true, 1.2), "Dimes and quarters have tiny ridges all around the edge. Pennies and nickels are smooth."),
       T.show(coinsPic(["d"], true, 1.8), COIN_FACT.d), T.show(coinsPic(["q"], true, 1.8), COIN_FACT.q),
-      T.show(coinsPic(["q", "q", "q", "q"], true, 1.2), "4 quarters make one dollar. That's why it's called a quarter: it's one fourth of a dollar!")]),
-    LS("coins.3", "math", "Who is on the coin?", { g: "coins", lv: 3, only: ["face"] }, () => ["p", "n", "d", "q"].map((k) =>
-      T.show(coinsPic([k], true, 1.8), `${FACE[k]} is on the ${COIN[k].name}.${k === "d" || k === "q" ? " Some years have special designs, too!" : ""}`))),
+      T.coins(["d", "d", "n"], "2 dimes and a nickel. Tap each coin to count!"),
+      T.show(coinsPic(["q", "q", "q", "q"], true, 1.2), "4 quarters make one dollar. That's why it's called a quarter: it's one fourth of a dollar!")], null, 8),
+    LS("coins.3", "math", "Who is on the coin?", { g: "coins", lv: 3, only: ["face"] }, () => [
+      T.show(coinsPic(["p", "n", "d", "q"], true, 1.2), "Each coin shows a famous American. Most of them were presidents."),
+      ...["p", "n", "d", "q"].map((k) => T.show(coinsPic([k], true, 1.8), `${FACE[k]} is on the ${COIN[k].name}.${{ p: " He was the 16th president.", n: " He was the 3rd president, and he wrote the Declaration of Independence.", d: " He was president for 12 years, longer than anyone else.", q: " He was the very first president." }[k]}${k === "d" || k === "q" ? " Some years have special designs, too!" : ""}`))], null, 8),
     LS("coins.4", "math", "Small but worth more", { g: "coins", lv: 4, only: ["more", "groups"] }, () => [
       T.show(coinsPic(["d", "n"], true, 1.6), "The dime is smaller than the nickel, but it's worth more! 10 cents is more than 5 cents."),
-      T.show(coinsPic(["q", "d", "n", "p"], true, 1.2), "From most to least: quarter 25, dime 10, nickel 5, penny 1. Don't pick by size. Think about what each coin is worth!")]),
+      T.show(coinsPic(["q", "d", "n", "p"], true, 1.2), "From most to least: quarter 25, dime 10, nickel 5, penny 1. Don't pick by size. Think about what each coin is worth!"),
+      T.show(coinsPic(["p", "p", "p", "n"], true, 1.3), "3 pennies or 1 nickel? 3 cents and 5 cents. The one nickel is worth more!"),
+      T.show(coinsPic(["d", "d", "d", "q"], true, 1.3), "3 dimes or 1 quarter? 30 cents and 25 cents. The 3 dimes are worth more!"),
+      T.show(coinsPic(["n", "n", "d"], true, 1.4), "2 nickels or 1 dime? 10 cents and 10 cents. They're the same!")], null, 8),
     LS("coins.5", "math", "Counting pennies", { g: "coins", lv: 1, only: ["pennies"] }, () => [
-      T.show(coinsPic(Array(6).fill("p"), true, 1.1), "Each penny is 1 cent. Count them: 1, 2, 3, 4, 5, 6. That's 6 cents!")]),
+      T.show(coinsPic(Array(6).fill("p"), true, 1.1), "Each penny is 1 cent. Count them: 1, 2, 3, 4, 5, 6. That's 6 cents!"),
+      T.coins(Array(4).fill("p"), "Your turn! Tap each penny to count."), T.coins(Array(8).fill("p"), "Tap each penny. How many cents?")], null, 8),
     LS("coins.6", "math", "Count nickels by 5s", { g: "coins", lv: 3, only: ["byfive"] }, () => [
       T.show(`<div class="bignum">5 10 15 20 25 30</div>`, "Counting by 5s goes: 5, 10, 15, 20, 25, 30!"),
-      T.show(coinsPic(Array(4).fill("n"), true, 1.2), "Count nickels by 5s: 5, 10, 15, 20. That's 20 cents!")]),
+      T.show(coinsPic(Array(4).fill("n"), true, 1.2), "Count nickels by 5s: 5, 10, 15, 20. That's 20 cents!"),
+      T.coins(Array(3).fill("n"), "Your turn! Tap each nickel and count by 5s."), T.coins(Array(6).fill("n"), "Tap each nickel. 5, 10, 15…")], null, 8),
     LS("coins.7", "math", "Count dimes by 10s", { g: "coins", lv: 3, only: ["dimes"] }, () => [
-      T.show(coinsPic(Array(5).fill("d"), true, 1.2), "Count dimes by 10s: 10, 20, 30, 40, 50. That's 50 cents!")]),
+      T.show(`<div class="bignum">10 20 30 40 50</div>`, "Counting by 10s goes: 10, 20, 30, 40, 50!"),
+      T.show(coinsPic(Array(5).fill("d"), true, 1.2), "Count dimes by 10s: 10, 20, 30, 40, 50. That's 50 cents!"),
+      T.coins(Array(4).fill("d"), "Your turn! Tap each dime and count by 10s."), T.coins(Array(7).fill("d"), "Tap each dime. 10, 20, 30…")], null, 8),
     LS("coins.8", "math", "Counting mixed coins", { g: "coins", lv: 3, only: ["mix"] }, () => [
+      T.show(coinsPic(["p", "q", "n", "d"], true, 1.2), "To count mixed coins, first line them up from the biggest value to the smallest."),
       T.show(coinsPic(["q", "d", "n", "p"], true, 1.2), "Start with the coin worth the most. 25, then 35, 40, 41. That's 41 cents!"),
-      T.show(coinsPic(["d", "d", "n", "p", "p"], true, 1.2), "10, 20, 25, 26, 27. That's 27 cents!")]),
-    LS("coins.9", "math", "Make 25 cents", { g: "coins", lv: 3, only: ["make"] }, () => [
+      T.show(coinsPic(["d", "d", "n", "p", "p"], true, 1.2), "10, 20, 25, 26, 27. That's 27 cents!"),
+      T.coins(["q", "d", "n", "p"], "Your turn! Tap each coin, biggest first."), T.coins(["d", "d", "n", "p", "p", "p"]), T.coins(["q", "q", "d", "n"])], null, 8),
+    LS("coins.9", "math", "Different ways to pay", { g: "coins", lv: 3, only: ["make"] }, () => [
+      T.show(coinsPic(["d"], true, 1.6), "There are lots of ways to make the same amount. 10 cents can be 1 dime…"),
+      T.show(coinsPic(["n", "n"], true, 1.6), "…or 2 nickels…"), T.show(coinsPic(["n", "p", "p", "p", "p", "p"], true, 1.2), "…or 1 nickel and 5 pennies. All 10 cents!"),
       T.show(coinsPic(["q"], true, 1.8), "One quarter is 25 cents."), T.show(coinsPic(["d", "d", "n"], true, 1.4), "2 dimes and a nickel: 10, 20, 25. That's 25 cents too!"),
-      T.show(coinsPic(Array(5).fill("n"), true, 1.1), "5 nickels: 5, 10, 15, 20, 25. 25 cents again! Different coins can make the same amount.")]),
+      T.show(coinsPic(Array(5).fill("n"), true, 1.1), "5 nickels: 5, 10, 15, 20, 25. 25 cents again!"),
+      T.show(coinsPic(["q", "q"], true, 1.5), "50 cents is 2 quarters, or 5 dimes."),
+      T.coins(["d", "n", "n", "p"], "Tap to count. Do these make 21 cents?")], null, 8),
     LS("coins.10", "math", "A dollar is 100 cents", { g: "coins", lv: 4, only: ["dollar"] }, () => [
       T.show(`<div class="flagbig">💵</div>`, "One dollar is worth 100 cents."), T.show(coinsPic(Array(4).fill("q"), true, 1.2), "4 quarters make a dollar: 25, 50, 75, 100!"),
-      T.show(coinsPic(Array(10).fill("d"), true, 0.9), "10 dimes make a dollar. 20 nickels or 100 pennies make a dollar too!")]),
+      T.coins(Array(4).fill("q"), "Tap each quarter: 25, 50, 75…"),
+      T.show(coinsPic(Array(10).fill("d"), true, 0.9), "10 dimes make a dollar. 20 nickels or 100 pennies make a dollar too!"),
+      T.coins(Array(10).fill("d"), "Tap all 10 dimes. Do they make a dollar?"),
+      T.show(`<div class="flagbig">💵 = 100¢</div>`, "We write one dollar like this: $1.00. The dot separates dollars from cents.")], null, 8),
+    LS("coins.11", "math", "Can I buy it?", { g: "coins", lv: 3, only: ["buy"] }, () => [
+      T.show(`<div class="flagbig">🍪 <span class="price">30¢</span></div>`, "A cookie costs 30 cents. To find out if you can buy it, count your coins."),
+      T.coins(["q", "n"], "You have these coins. Tap to count them!"),
+      T.show(`<div class="flagbig">✅</div>`, "25, 30. You have 30 cents. That's exactly enough for the cookie!"),
+      T.show(`<div class="flagbig">🎈 <span class="price">40¢</span></div>${coinsPic(["d", "d", "n"], true, 1)}`, "A balloon costs 40 cents. You have 10, 20, 25: 25 cents. That's not enough. You need 15 cents more."),
+      T.show(`<div class="flagbig">🧃 <span class="price">20¢</span></div>${coinsPic(["q"], true, 1)}`, "A juice box costs 20 cents. You have a quarter, 25 cents. That's enough, and you get 5 cents back!")], null, 8),
+    LS("coins.12", "math", "Coin review", [{ g: "coins", lv: 4, only: ["value", "face"] }, { g: "coins", lv: 4, only: ["mix"] }, { g: "coins", lv: 4, only: ["more", "groups"] },
+      { g: "coins", lv: 3, only: ["make"] }, { g: "coins", lv: 4, only: ["dollar"] }, { g: "coins", lv: 3, only: ["buy"] }], () => [
+      T.show(coinsPic(["q", "d", "n", "p"], true, 1.3), "Quarter 25, dime 10, nickel 5, penny 1. Let's practice everything you learned about coins!")], null, 10),
   ] },
   { id: "time", game: "clock", ico: "⏰", name: "Clock and time", lessons: [
     LS("time.1", "math", "Parts of a clock", { g: "clock", lv: 1 }, () => [
@@ -2236,7 +2295,7 @@ const TOPICS = [
 // Adventure lessons that are also covered by library lessons: passing those (4 of 5) counts as doing the Adventure lesson.
 const LIB = { "1d": ["states.1"], "4b": ["coins.1", "coins.2"], "4d": ["flags.1"], "5d": ["states.3", "states.4", "states.5", "states.6"], "6b": ["time.2"],
   "6d": ["countries.2"], "7b": ["time.3"], "7d": ["countries.1"], "8b": ["coins.6", "coins.8"], "8d": ["states.7"] };
-const passed = (id, data = S.data) => ((data.lessons || {})[id] || {}).n >= PASS_N;
+const passed = (id, data = S.data) => { const d = (data.lessons || {})[id]; return !!d && d.n >= Math.ceil(0.75 * (d.of || LESSON_Q)); };  // 4 of 5, 6 of 8
 const lsDone = (x, data = S.data) => !!(data.lessons || {})[x.id] || (!!LIB[x.id] && LIB[x.id].every((id) => passed(id, data)));
 const topicLessons = (t) => t.lessons.map((x) => (typeof x === "string" ? lessonById(x)[1] : x));
 
@@ -2486,7 +2545,7 @@ async function openLesson(id) {
   if (!ls) return;
   try { await needData(ls); } catch { toast("That didn’t load. Check the internet."); return; }
   if (L) S.level = L.n;
-  S.lesson = { id, i: 0, tapped: new Set(), slides: ls.slides() };
+  S.lesson = { id, i: 0, tapped: new Set(), marks: new Map(), total: 0, slides: ls.slides() };
   S.view = "lesson";
   render();
   speakSlide();
@@ -2499,7 +2558,7 @@ async function startLessonRound(id) {
   const [L, ls] = lessonById(id);
   try { await needData(ls); } catch { toast("That didn’t load. Check the internet."); return; }
   if (L) S.level = L.n;
-  S.round = { mode: "lesson", lesson: id, lv: L ? L.n : null, games: Array.isArray(ls.p) ? shuffle(Array.from({ length: LESSON_Q }, (_, i) => ls.p[i % ls.p.length])) : Array(LESSON_Q).fill(ls.p), i: 0, results: [], seen: new Set(), before: tally().earned };
+  S.round = { mode: "lesson", lesson: id, lv: L ? L.n : null, games: Array.isArray(ls.p) ? shuffle(Array.from({ length: ls.n || LESSON_Q }, (_, i) => ls.p[i % ls.p.length])) : Array(ls.n || LESSON_Q).fill(ls.p), i: 0, results: [], seen: new Set(), before: tally().earned };
   S.view = "play";
   await nextQuestion();
 }
@@ -2611,13 +2670,13 @@ function lessonDoneView() {
   const r = S.round, s = r.summary, L = r.lv ? LEVELS[r.lv - 1] : null, topic = S.ctx && S.ctx.type === "topic" ? TOPICS.find((t) => t.id === S.ctx.id) : null;
   const list = topic ? topicLessons(topic) : L ? L.lessons : [], nextLs = r.boss ? null : list[list.findIndex((x) => x.id === r.lesson) + 1];
   const back = topic ? `<button class="btn" data-topic="${topic.id}">${topic.ico} ${esc(topic.name)}</button>` : L ? `<button class="btn" data-level="${L.n}">Level ${L.n} ▶</button>` : `<button class="btn" data-go="games">Topics ▶</button>`;
-  const st = r.boss ? 0 : lessonStars({ n: s.right });
+  const st = r.boss ? 0 : lessonStars({ n: s.right, of: r.games.length });
   return `<section class="done"><span class="star">${r.boss ? (s.pass ? "⚡" : "💪") : st === 3 ? "🌟" : "⭐"}</span>
   <h1>${r.boss ? (s.pass ? "Challenge passed!" : "Good try!") : "Lesson done!"}</h1>
   <p>${s.right} of ${r.games.length} right on the first try.</p>
   ${r.boss ? "" : `<div class="lstars">${"★".repeat(st)}${"☆".repeat(3 - st)}</div>`}
   ${s.gained ? `<div class="how" style="text-align:center"><div>⭐ <b>+${s.gained} stars!</b></div></div>` : ""}
-  ${!r.boss && !L && s.right >= PASS_N ? `<p>✅ Passed! It counts on your adventure map too.</p>` : ""}
+  ${!r.boss && !L && passed(r.lesson) ? `<p>✅ Passed! It counts on your adventure map too.</p>` : ""}
   <div class="btns">${nextLs ? `<button class="btn" data-lesson="${nextLs.id}">Next lesson ▶</button>` : back}
   <button class="btn soft" data-${r.boss ? "boss" : "lpractice"}="${r.boss ? L.n : r.lesson}">Try again 🔁</button>
   <button class="btn soft" data-go="home">My adventure 🗺️</button></div></section>`;
@@ -2846,9 +2905,19 @@ document.addEventListener("click", async (e) => {
     const l = S.lesson, sl = l.slides[l.i];
     if (l.tapped.has(tc.dataset.tc)) return;
     l.tapped.add(tc.dataset.tc);
-    tc.classList.add("on"); tc.dataset.num = l.tapped.size;
-    say(String(l.tapped.size));
-    if (l.tapped.size >= sl.count) { setTimeout(() => { if (S.view !== "lesson" || S.lesson !== l) return; render(); confetti(20); say(sl.done, 0, "praise"); }, 700); }
+    if (tc.dataset.v) l.total += +tc.dataset.v;
+    const mark = tc.dataset.v ? `${l.total}¢` : String(l.tapped.size);
+    l.marks.set(tc.dataset.tc, mark);
+    tc.classList.add("on"); tc.dataset.num = mark;
+    say(String(tc.dataset.v ? l.total : l.tapped.size));
+    if (l.tapped.size >= sl.count) {
+      setTimeout(() => {
+        if (S.view !== "lesson" || S.lesson !== l) return;
+        render();
+        for (const [k, m] of l.marks) { const el = document.querySelector(`[data-tc="${k}"]`); if (el) { el.classList.add("on"); el.dataset.num = m; } }  // keep the counts showing
+        confetti(20); say(sl.done, 0, "praise");
+      }, 700);
+    }
     return;
   }
   const story = e.target.closest("[data-story]");
@@ -2880,8 +2949,8 @@ document.addEventListener("click", async (e) => {
     if (a === "quitlesson") { S.view = S.ctx && S.ctx.type === "topic" ? "topic" : "level"; S.lesson = null; render(); }
     if (a === "place") startPlacement();
     if (a === "hearslide") speakSlide();
-    if (a === "slprev" && S.lesson.i > 0) { S.lesson.i--; S.lesson.tapped = new Set(); render(); speakSlide(); }
-    if (a === "slnext") { if (S.lesson.i + 1 < S.lesson.slides.length) { S.lesson.i++; S.lesson.tapped = new Set(); render(); speakSlide(); } else startLessonRound(S.lesson.id); }
+    if (a === "slprev" && S.lesson.i > 0) { S.lesson.i--; Object.assign(S.lesson, { tapped: new Set(), marks: new Map(), total: 0 }); render(); speakSlide(); }
+    if (a === "slnext") { if (S.lesson.i + 1 < S.lesson.slides.length) { S.lesson.i++; Object.assign(S.lesson, { tapped: new Set(), marks: new Map(), total: 0 }); render(); speakSlide(); } else startLessonRound(S.lesson.id); }
     if (a === "quit" && S.round.lesson) { S.view = S.ctx && S.ctx.type === "topic" && !S.round.boss ? "topic" : "level"; S.round = null; render(); return; }
     if (a === "quit") { if (S.round.mode === "today" && S.round.results.length) modal(`<span class="em">🛑</span><h2>Stop Today's 5?</h2>`, () => { S.view = "home"; S.round = null; render(); }); else { S.view = "home"; S.round = null; render(); } }
     if (a === "logout") modal(`<span class="em">👋</span><h2>Log out?</h2>`, async () => { await fetch("/api/logout", { method: "POST" }).catch(() => {}); location.href = "/login"; });
