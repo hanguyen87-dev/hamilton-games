@@ -54,7 +54,7 @@ Same as SAT Daily Ten, no framework, no build step: `index.html` (the whole app)
 
 - Vercel project `hamilton-games` (team `hanguyen-8346s-projects`), private Blob store `hamilton-games-progress`. Live at https://hamilton-games.vercel.app, and at https://games.hanolabs.com once its DNS is in.
 - Environment variables (Production): `STUDENT_PASSWORD`, `PARENT_PASSWORD`, `SESSION_SECRET`, `CRON_SECRET`, `BLOB_READ_WRITE_TOKEN` (added by the Blob store).
-- Deploy a change: `vercel deploy --prod --yes --scope hademolab` from this folder. Don't commit a package-lock.json: local npm goes through the Mercor registry and breaks Vercel builds.
+- Deploy a change: `sh tools/deploy.sh` (deploys a copy without .git; with git info attached the Pro team blocks it because the commit email is not a team member). Don't commit a package-lock.json: local npm goes through the Mercor registry and breaks Vercel builds.
 - games.hanolabs.com DNS at Squarespace: CNAME `games` -> `22b9ee980dbaa05b.vercel-dns-017.com`, TXT `_vercel` -> `vc-domain-verify=games.hanolabs.com,73a9d51d014b399404b5` (added next to the existing sat and cards TXT records, not replacing them).
 - On his iPad or phone: open the address in Safari, Share, Add to Home Screen, log in as Hamilton.
 
