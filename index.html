@@ -39,6 +39,7 @@ h1, h2 { font-weight: 800; line-height: 1.1; margin: 0; }
 .chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: 999px; background: var(--surface); border: 2px solid var(--line); font-weight: 800; font-size: 1.05rem; white-space: nowrap; }
 .icon { width: 48px; height: 48px; border-radius: 14px; border: 2px solid var(--line); background: var(--surface); font-size: 1.4rem; display: grid; place-items: center; padding: 0; flex: none; }
 .icon:active { transform: translateY(2px); }
+@media (max-width: 360px) { .top { gap: 5px; } .icon { width: 42px; height: 42px; font-size: 1.2rem; } .chip { padding: 4px 8px; font-size: .95rem; } }
 
 /* home */
 .hello { display: flex; align-items: center; gap: 14px; margin: 6px 0 16px; }
@@ -318,6 +319,22 @@ button.fcard { cursor: pointer; }
 .fact .ft { font-size: 1.4rem; font-weight: 800; }
 .fact span { font-size: 1.02rem; color: var(--muted); font-weight: 700; }
 .fact p { margin: 6px 0 0; font-size: 1.15rem; font-weight: 700; }
+/* times tables */
+.row.feature { background: var(--sky-soft); border-color: var(--sky); margin-bottom: 12px; }
+.row.feature .ico { font-size: 2.4rem; }
+.ico.ttn { font-size: 1.3rem; font-weight: 800; color: var(--brand); background: var(--bg); border: 2px solid var(--line); border-radius: 14px; width: 52px; height: 46px; display: grid; place-items: center; }
+.arr.sm { font-size: clamp(1rem, 4.6vw, 1.4rem); gap: 2px 4px; }
+.ttlist { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 20px; font-size: clamp(1.15rem, 5vw, 1.5rem); font-weight: 700; }
+.ttlist b { color: var(--brand); }
+.ttfact { text-align: center; font-size: 2rem; font-weight: 800; margin: 4px 0 10px; min-height: 2.6rem; }
+.ttfact b { color: var(--brand); }
+.ttgrid { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 1px; width: 100%; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.ttgrid > * { aspect-ratio: 1; min-width: 0; overflow: hidden; display: grid; place-items: center; font-size: clamp(.5rem, 2.55vw, .95rem); font-weight: 700; border-radius: 4px; }
+.ttgrid .h { background: var(--ink); color: var(--bg); font-weight: 800; }
+.ttgrid .h.on { background: var(--brand); color: #fff; }
+.ttgrid button { border: 0; padding: 0; background: var(--surface); color: var(--ink); font-family: inherit; font-weight: 700; }  /* keep the small grid size (font: inherit would reset it) */
+.ttgrid button.path { background: var(--sun); color: #2B2118; }
+.ttgrid button.pick { background: var(--brand); color: #fff; transform: scale(1.15); }
 /* trophy room */
 .shelf { background: var(--surface); border: 2px solid var(--line); border-radius: 20px; padding: 12px 14px; margin-bottom: 14px; box-shadow: var(--shadow); }
 .shelf h2 { margin: 0 0 8px; font-size: 1.15rem; }
@@ -366,6 +383,7 @@ const GAMES = [
   { id: "countries", ico: "🌍", name: "Countries", sub: "Countries, continents, capitals" },
   { id: "continents", ico: "🌎", name: "Continents", sub: "The 7 continents" },
   { id: "shapes", ico: "🔷", name: "Shapes", sub: "Shapes and sides" },
+  { id: "times", ico: "🧮", name: "Times tables", sub: "Multiplying facts" },
 ];
 // Must match SHOP_COST in api/db.js.
 const SHOP = [
@@ -409,7 +427,9 @@ function others(list, target, n, near) {
 }
 
 // ---------- state + saving ----------
-const S = { role: "student", space: "his", data: {}, view: "home", round: null, sound: true, api: true, level: 1, lesson: null, topic: null, ctx: null };
+const S = { role: "student", space: "his", data: {}, view: "home", round: null, sound: true, api: true, level: 1, lesson: null, topic: null, ctx: null, advOpen: false, chart: null };
+// The Level 1 to 20 map on the home screen starts closed; "Show" opens it and the choice is remembered on this device.
+try { S.advOpen = localStorage.getItem("hgt-adv") === "open"; } catch { /* storage blocked */ }
 const PARENT_WRITES = new Set(["grants", "freezes", "redemptions"]);
 try { S.sound = localStorage.getItem("hgt-sound") !== "off"; } catch { /* storage blocked */ }
 const LOCAL = new Set(["localhost", "127.0.0.1", ""]);
@@ -1938,6 +1958,7 @@ const gradeOf = (n) => GRADES.findIndex((g) => n <= g.last);
 function lessonById(id) {
   for (const L of LEVELS) for (const ls of L.lessons || []) if (ls.id === id) return [L, ls];
   for (const t of TOPICS) for (const ls of t.lessons) if (typeof ls !== "string" && ls.id === id) return [null, ls];
+  for (const ls of TT_PRACTICE) if (ls.id === id) return [null, ls];
   return [null, null];
 }
 // Stars and passing go by the share right on the first try, since lessons can have 5 or more practice questions.
@@ -2136,6 +2157,112 @@ const usTour = () => [
   stateSlide("AK"), stateSlide("HI"), stateSlide("TX"), stateSlide("CA"), stateSlide("RI"), stateSlide("FL"), stateSlide("NY"),
   T.show(usMap(), "Every state has a capital city, where its leaders work. Let's learn them all!")];
 
+// ---------- times tables section ----------
+// A lesson and a practice game for every table 1 to 12, plus "What is multiplying?", mixed practice, a speed round, and a chart.
+const TT_MAX = 12;
+const TT_TIP = {
+  1: "Anything times 1 is itself. 1 × 7 = 7.", 2: "Times 2 means double it! 2 × 6 is 6 + 6 = 12.",
+  3: "Count by 3s: 3, 6, 9, 12, 15, 18. Clap on every third number!", 4: "Times 4 is double, then double again. 4 × 6: double 6 is 12, double 12 is 24.",
+  5: "Times 5 answers always end in 0 or 5. Count by 5s, like the minutes on a clock!", 6: "Times 6 is times 5, plus one more group. 6 × 4 is 5 × 4 = 20, plus 4 more = 24.",
+  7: "A trick for 7 × 8: say 5, 6, 7, 8. That's 56 = 7 × 8!", 8: "Times 8 is double, double, double. 8 × 3: 3, 6, 12, 24.",
+  9: "In the 9s, the digits add up to 9: 18, 27, 36. And the tens digit is one less than the number you times by: 9 × 4 = 36.",
+  10: "Times 10: just put a 0 at the end! 10 × 7 = 70.", 11: "Up to 9, times 11 repeats the digit: 11 × 4 = 44.", 12: "Times 12 is times 10 plus times 2. 12 × 3 = 30 + 6 = 36.",
+};
+const TT_EM = ["🍎", "⭐", "🐞", "🍪", "🎈", "🐟", "🍓", "🌸", "🚗", "🦆", "🧁", "🐸", "⚽"];
+const TT_BOX = [["🧺", "basket", "baskets"], ["📦", "box", "boxes"], ["🛍️", "bag", "bags"], ["🍽️", "plate", "plates"], ["🌳", "tree", "trees"]];
+const ttArr = (rows, cols, em) => `<div class="arr${cols > 6 ? " sm" : ""}" style="--c:${cols}">${Array.from({ length: rows * cols }, () => `<span>${em}</span>`).join("")}</div>`;
+// Default tables by hidden level (free play and Today's 5).
+const TT_BY_LV = [[1, 2, 10], [2, 5, 10], [2, 3, 4, 5, 10], [3, 4, 6, 7, 8, 9], [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]];
+Object.assign(GEN, {
+  times(lv, only, xo = {}) {
+    const tabs = xo.tables || TT_BY_LV[lv - 1], a = pick(tabs);
+    let type = pick(only || ["fact", "fact", "turn", "missing", "word", "skip", ...(a <= 6 ? ["array"] : [])]);
+    if (type === "array" && a > 6) type = "word";  // pictures of rows stay small enough for a phone
+    const b = type === "array" ? rnd(1, 6) : rnd(1, xo.upto || (a >= 11 ? 9 : TT_MAX)), p = a * b;
+    const near = (ans, steps, lo = 0) => numChF(nearNums(ans, steps.filter((x) => x > 0), 4, lo));
+    const eq = (s) => `<div class="eq">${s}</div>`, tip = Math.random() < 0.5 && TT_TIP[a] ? ` ${TT_TIP[a]}` : "";
+    if (type === "missing") {
+      return { key: `tm${a}x${b}`, prompt: "What number is missing?", say: `${a} times what makes ${p}?`, pic: eq(`${a} × <u>?</u> = ${p}`),
+        choices: near(b, [1, 2, 3], 1), answer: String(b), after: `${a} × ${b} = ${p}.${tip}` };
+    }
+    if (type === "skip") {
+      const k = rnd(1, 8), seq = [a * k, a * (k + 1), a * (k + 2)], ans = a * (k + 3);
+      return { key: `ts${a}k${k}`, prompt: `Count by ${a}s. What comes next?`, say: `Count by ${a}s. ${seq.join(", ")}. What comes next?`,
+        pic: `<div class="nline">${[...seq, "?"].map((v) => `<b class="${v === "?" ? "q" : ""}">${v}</b>`).join("")}</div>`, choices: near(ans, [a, 1, 2]), answer: String(ans), after: `${seq.join(", ")}, ${ans}!` };
+    }
+    if (type === "array") {
+      const em = pick(TT_EM);
+      return { key: `ta${a}x${b}${em}`, prompt: `${plural(a, "row", "rows")} of ${b}. How many in all?`, say: `There are ${a} rows, with ${b} in each row. How many in all?`, pic: ttArr(a, b, em),
+        choices: near(p, [a, b, 1]), answer: String(p), after: `${a} rows of ${b} is ${a} × ${b} = ${p}.` };
+    }
+    if (type === "word") {
+      const [bem, box, boxes] = pick(TT_BOX), [em, one, many] = pick(THINGS);
+      return { key: `tw${a}x${b}${em}`, prompt: `${plural(a, box, boxes)} with ${plural(b, one, many)} in each. How many ${many}?`, say: `There are ${plural(a, box, boxes)}. Each ${box} has ${plural(b, one, many)}. How many ${many} in all?`,
+        pic: `<div class="flagbig">${bem} ${em}</div>`, choices: near(p, [a, b, 1]), answer: String(p), after: `${a} groups of ${b}: ${a} × ${b} = ${p}.` };
+    }
+    const [x, y] = type === "turn" ? [b, a] : [a, b];
+    return { key: `tf${x}x${y}`, prompt: "Multiply!", say: `What is ${x} times ${y}?`, pic: eq(`${x} × ${y} = <u>?</u>`), choices: near(p, [a, b, 1, 2]), answer: String(p),
+      after: `${x} × ${y} = ${p}.${type === "turn" ? ` It's the same as ${y} × ${x}!` : tip}` };
+  },
+});
+const ttSpecs = (tables, types) => types.map((t) => ({ g: "times", lv: 3, only: [t], opts: { tables } }));
+const ttMixTypes = (n) => ["fact", "fact", "turn", "missing", "skip", "word", ...(n <= 6 ? ["array"] : [])];
+function ttSlides(N) {
+  const em = TT_EM[N], top = N >= 11 ? 9 : TT_MAX, seq = Array.from({ length: 10 }, (_, i) => N * (i + 1));
+  return [
+    T.show(`<div class="bignum">${seq.slice(0, 5).join(" ")}<br>${seq.slice(5).join(" ")}</div>`, `The ${N} times table is counting by ${N}s: ${seq.join(", ")}.`),
+    ...[1, 2, 3].map((k) => T.show(ttArr(k, N, em), `${plural(k, "group", "groups")} of ${N} is ${k * N}. We write it ${k} × ${N} = ${k * N}.`)),
+    T.show(`<div class="flagbig">💡</div>`, TT_TIP[N]),
+    T.show(`<div class="ttlist">${Array.from({ length: top }, (_, i) => `<span>${N} × ${i + 1} = <b>${N * (i + 1)}</b></span>`).join("")}</div>`, `Here's the whole ${N} times table. Say it out loud with me!`, { say: Array.from({ length: top }, (_, i) => `${N} times ${i + 1} is ${N * (i + 1)}.`).join(" ") }),
+    T.show(`<div class="eq">${N} × 3 = 3 × ${N}</div>`, `You can swap the numbers and the answer stays the same. ${N} × 3 and 3 × ${N} are both ${3 * N}.`),
+    T.show(`<div class="flagbig">✏️</div>`, `Now let's practice the ${N} times table!`)];
+}
+const TT_LESSONS = [
+  LS("tt.intro", "math", "What is multiplying?", ttSpecs([2, 5, 10], ["array", "word", "fact"]), () => [
+    T.show(ttArr(3, 2, "🍎"), "3 groups of 2 apples. 2 + 2 + 2 = 6."),
+    T.show(`<div class="eq">3 × 2 = 6</div>`, "Multiplying is a fast way to add the same number again and again. The × sign means times, or groups of."),
+    T.show(ttArr(4, 5, "⭐"), "Things in rows are called an array. 4 rows of 5 stars: 4 × 5 = 20."),
+    T.show(`<div class="two">${ttArr(2, 3, "🐞")}<span class="plus">=</span>${ttArr(3, 2, "🐞")}</div>`, "2 rows of 3 and 3 rows of 2 are both 6. You can swap the numbers!"),
+    T.show(`<div class="eq">7 × 1 = 7</div>`, "Anything times 1 is itself."), T.show(`<div class="eq">5 × 0 = 0</div>`, "Anything times 0 is 0. 5 groups of nothing is nothing!"),
+    T.show(`<div class="bignum">1 2 10 5 3 4</div>`, "A good order to learn the tables: 1, 2, 10, 5, then 3 and 4, then the rest.")], null, 8),
+  ...Array.from({ length: TT_MAX }, (_, i) => i + 1).map((N) => LS(`tt.${N}`, "math", `The ${N} times table`, ttSpecs([N], ttMixTypes(N)), () => ttSlides(N), null, 10)),
+];
+// Practice-only rounds (no pages): one per table, mixed, and the speed round.
+const TT_PRACTICE = [
+  ...Array.from({ length: TT_MAX }, (_, i) => i + 1).map((N) => LS(`ttp.${N}`, "math", `${N} times table practice`, ttSpecs([N], ttMixTypes(N)), () => [], null, 10)),
+  LS("ttp.mix", "math", "Mixed practice", ttSpecs([2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], ["fact", "turn", "missing", "skip", "word"]), () => [], null, 12),
+  Object.assign(LS("ttp.speed", "math", "Speed round", ttSpecs([2, 3, 4, 5, 6, 7, 8, 9, 10], ["fact", "turn"]), () => [], null, 10), { speed: true }),
+];
+function timesView() {
+  const ls = S.data.lessons || {}, stars = (id) => { const st = lessonStars(ls[id]); return st ? "★".repeat(st) + "☆".repeat(3 - st) : "☆☆☆"; };
+  const sp = ls["ttp.speed"];
+  return `<section class="lvhead"><div class="lvem">🧮</div><h1>Times Tables</h1><p>Learn each table, then practice it!</p></section>
+  <div class="rows">
+    <button class="row" data-lesson="tt.intro"><span class="ico">🤔</span><span class="txt"><b>What is multiplying?</b><small>Start here</small></span><span class="lv"><i>${stars("tt.intro")}</i>Learn ▶</span></button>
+    <button class="row" data-go="ttchart"><span class="ico">📊</span><span class="txt"><b>Times table chart</b><small>Tap any square to see and hear the fact</small></span></button>
+  </div>
+  <h2>Learn and practice each table</h2>
+  <div class="rows">${Array.from({ length: TT_MAX }, (_, i) => i + 1).map((N) => `<div class="row topic"><span class="ico ttn">×${N}</span><span class="txt"><b>The ${N} times table</b><small>Lesson ${stars(`tt.${N}`)} · Practice ${stars(`ttp.${N}`)}</small></span>
+    <span class="tbtns"><button class="mini" data-lesson="tt.${N}">📘 Learn</button><button class="mini soft" data-lpractice="ttp.${N}">🎮 Practice</button></span></div>`).join("")}</div>
+  <h2>Challenges</h2>
+  <div class="rows">
+    <button class="row" data-lpractice="ttp.mix"><span class="ico">🎲</span><span class="txt"><b>Mixed practice</b><small>12 questions from all the tables</small></span><span class="lv"><i>${stars("ttp.mix")}</i>Play ▶</span></button>
+    <button class="row boss" data-lpractice="ttp.speed"><span class="ico">⚡</span><span class="txt"><b>Speed round</b><small>10 facts as fast as you can${sp && sp.best ? ` · Best: ${sp.best} seconds` : ""}</small></span></button>
+    <button class="row" data-flash="times"><span class="ico">🃏</span><span class="txt"><b>Times table flashcards</b><small>Flip the cards to learn the facts</small></span></button>
+  </div>`;
+}
+function ttChartView() {
+  const c = S.chart || { a: 0, b: 0 }, n = TT_MAX;
+  let g = `<div class="ttgrid" style="--n:${n + 1}"><span class="h">×</span>`;
+  for (let b = 1; b <= n; b++) g += `<span class="h${b === c.b ? " on" : ""}">${b}</span>`;
+  for (let a = 1; a <= n; a++) {
+    g += `<span class="h${a === c.a ? " on" : ""}">${a}</span>`;
+    for (let b = 1; b <= n; b++) g += `<button data-tt="${a},${b}" class="${a === c.a && b === c.b ? "pick" : (a === c.a && b <= c.b) || (b === c.b && a <= c.a) ? "path" : ""}">${a * b}</button>`;
+  }
+  return `<h2 style="margin-top:6px">📊 Times table chart</h2><p class="storytitle" style="text-align:left;margin-bottom:10px">Tap a square. Its row and column light up.</p>
+  <div class="ttfact">${c.a ? `${c.a} × ${c.b} = <b>${c.a * c.b}</b>` : "Tap any square!"}</div>${g}</div>`;
+}
+
 const TOPICS = [
   { id: "coins", game: "coins", ico: "🪙", name: "Coins", lessons: [
     // Coin lessons: teaching pages, tap-to-count coins, then 8 practice questions (the 8 at the end of each LS).
@@ -2286,6 +2413,7 @@ const TOPICS = [
   { id: "count", game: "count", ico: "🍎", name: "Counting", lessons: ["1a", "2a", "3b", "5a", "6a", "8a"] },
   { id: "add", game: "add", ico: "➕", name: "Adding and taking away", lessons: ["3a", "4a", "5b", "7a"] },
   { id: "shapes", game: "shapes", ico: "🔷", name: "Shapes and patterns", lessons: ["1b", "2b", "8c"] },
+  { id: "times", game: "times", ico: "🧮", name: "Times tables", lessons: TT_LESSONS },
   { id: "numbers", game: "numbers", ico: "🔢", name: "Big numbers", lessons: ["6a", "9a", "9b", "14b", "17c"] },
   { id: "arith", game: "arith", ico: "✖️", name: "Add, subtract, times, divide", lessons: ["10a", "10b", "12a", "12b", "13b", "15a", "15b", "20a"] },
   { id: "fractions", game: "frac", ico: "🍕", name: "Fractions and decimals", lessons: ["13a", "16a", "16b", "17a", "18a", "18b"] },
@@ -2322,7 +2450,7 @@ const DECKS = {
     title: cap(COIN[k].name), lines: [`Worth ${cents(COIN[k].v)}`, `${FACE[k]} is on it`], say: `A ${COIN[k].name}. It's worth ${cents(COIN[k].v)}.` })) },
   sounds: { name: "Letter sounds", ico: "🔤", data: "sounds", items: () => R().sounds.filter((x) => x.k !== "x").map((x) => ({ id: x.k, pic: `<div class="bigletter">${x.k}</div>`, front: "What sound does it make?",
     title: `${x.k} says ${slash(x.k)}`, lines: [x.pics.map((p) => `${p[1]} ${p[0]}`).join("   ")], say: `${x.k} says ${x.say}`, clips: [sndItem(x.k, 0.5), ...(x.pics[0] ? [firstA(x.pics[0][0], x.k)] : [])] })) },
-  times: { name: "Times tables", ico: "✖️", items: () => { const out = []; for (let a = 2; a <= 10; a++) for (let b = a; b <= 10; b++) out.push({ id: `${a}x${b}`, pic: `<div class="eq">${a} × ${b}</div>`, front: "What is the answer?", title: `${a} × ${b} = ${a * b}`, lines: [], say: `${a} times ${b} is ${a * b}.` }); return out; } },
+  times: { name: "Times tables", ico: "🧮", items: () => { const out = []; for (let a = 2; a <= TT_MAX; a++) for (let b = a; b <= TT_MAX; b++) out.push({ id: `${a}x${b}`, pic: `<div class="eq">${a} × ${b}</div>`, front: "What is the answer?", title: `${a} × ${b} = ${a * b}`, lines: [], say: `${a} times ${b} is ${a * b}.` }); return out; } },
   shapes: { name: "Shapes", ico: "🔷", items: () => Object.keys(SHAPES).map((k) => ({ id: k, pic: shapeSvg(k, 1.8), front: "What shape is this?", title: cap(k), lines: SHAPES[k].sides ? [`${SHAPES[k].sides} sides`] : [], say: `${cap(k)}.${SHAPES[k].sides ? ` It has ${SHAPES[k].sides} sides.` : ""}` })) },
 };
 const TOPIC_DECK = { states: "states", countries: "countries", world: "conts", flags: "flags", coins: "coins", sounds: "sounds", arith: "times", shapes: "shapes" };
@@ -2554,13 +2682,13 @@ async function openLesson(id) {
 }
 function speakSlide() {
   const sl = S.lesson.slides[S.lesson.i];
-  if (sl.clips) speak(sl.clips, 200); else say(sl.text, 200);
+  if (sl.clips) speak(sl.clips, 200); else say(sl.say || sl.text, 200);
 }
 async function startLessonRound(id) {
   const [L, ls] = lessonById(id);
   try { await needData(ls); } catch { toast("That didn’t load. Check the internet."); return; }
   if (L) S.level = L.n;
-  S.round = { mode: "lesson", lesson: id, lv: L ? L.n : null, games: Array.isArray(ls.p) ? shuffle(Array.from({ length: ls.n || LESSON_Q }, (_, i) => ls.p[i % ls.p.length])) : Array(ls.n || LESSON_Q).fill(ls.p), i: 0, results: [], seen: new Set(), before: tally().earned };
+  S.round = { mode: "lesson", lesson: id, speed: !!ls.speed, t0: Date.now(), lv: L ? L.n : null, games: Array.isArray(ls.p) ? shuffle(Array.from({ length: ls.n || LESSON_Q }, (_, i) => ls.p[i % ls.p.length])) : Array(ls.n || LESSON_Q).fill(ls.p), i: 0, results: [], seen: new Set(), before: tally().earned };
   S.view = "play";
   await nextQuestion();
 }
@@ -2580,11 +2708,14 @@ function finishLesson() {
   const old = (S.data.lessons || {})[r.lesson];
   const doc = { ...(r.lv ? { lv: r.lv } : {}), n: Math.max(right, old ? old.n || 0 : 0), of: r.games.length, d: dayOf(), t: Date.now() };
   if (r.boss) doc.pass = right >= BOSS_PASS || !!(old && old.pass);
+  // Speed round: seconds for all the questions; the best time is kept.
+  const secs = r.speed ? Math.round((Date.now() - r.t0) / 1000) : null;
+  if (secs) doc.best = Math.min(secs, (old && old.best) || Infinity);
   put("lessons", r.lesson, doc);
   flush();
   const after = tally();
   const up = LEVELS.find((L, i) => !wasLv[i] && levelDone(L.n)), gi = up ? gradeOf(up.n) : -1;
-  r.summary = { right, gained: after.earned - r.before, levelUp: !!up, upLevel: up ? up.n : null, trophy: gi >= 0 && !wasGr[gi] && gradeDone(gi), first: !old, pass: r.boss ? right >= BOSS_PASS : null };
+  r.summary = { right, gained: after.earned - r.before, levelUp: !!up, upLevel: up ? up.n : null, trophy: gi >= 0 && !wasGr[gi] && gradeDone(gi), first: !old, pass: r.boss ? right >= BOSS_PASS : null, secs, best: doc.best || null };
   S.view = r.summary.levelUp ? "levelup" : "lessondone";
   render();
   if (r.summary.levelUp) {
@@ -2594,7 +2725,7 @@ function finishLesson() {
   } else {
     sfx.win(); confetti(60);
     say(r.boss ? (r.summary.pass ? "You passed the challenge!" : `You got ${right} right. You need ${BOSS_PASS} to pass. Try the lessons, then try again!`)
-      : `Lesson done! You got ${right} right on the first try. You earned ${plural(r.summary.gained, "star", "stars")}!`, 500, "praise");
+      : `${secs ? `You did it in ${secs} seconds! ` : r.lesson.startsWith("ttp.") ? "Great practice! " : "Lesson done! "}You got ${right} right on the first try. You earned ${plural(r.summary.gained, "star", "stars")}!`, 500, "praise");
   }
 }
 
@@ -2636,12 +2767,13 @@ function mapView(t) {
     <button data-go="trophies"><span>🏆</span>Trophies</button><button data-go="rewards"><span>🎁</span>Prizes</button>
     <button data-go="grownups"><span>🔒</span>Parent</button>
   </div>
-  ${(S.data.lessons || {}).place ? "" : `<button class="row boss" data-act="place"><span class="ico">🧭</span><span class="txt"><b>Find my level!</b><small>A quick quiz to start in just the right place.</small></span></button>`}
-  <h2>🗺️ My adventure</h2>
+  <button class="row feature" data-go="times"><span class="ico">🧮</span><span class="txt"><b>Times Tables</b><small>Lessons, practice, chart, and speed round</small></span><span class="lv">Go ▶</span></button>
+  <button class="row" data-act="advtoggle" aria-expanded="${S.advOpen}"><span class="ico">🗺️</span><span class="txt"><b>My adventure</b><small>Levels 1 to 20 · now on Level ${cur}</small></span><span class="lv">${S.advOpen ? "Hide ▲" : "Show ▼"}</span></button>
+  ${S.advOpen ? `${(S.data.lessons || {}).place ? "" : `<button class="row boss" data-act="place"><span class="ico">🧭</span><span class="txt"><b>Find my level!</b><small>A quick quiz to start in just the right place.</small></span></button>`}
   <div class="adv" style="height:${y}px">
     <svg class="trail" viewBox="0 0 100 ${y}" preserveAspectRatio="none" aria-hidden="true"><path class="road" d="${d}"/><path class="dash" d="${d}"/></svg>
     ${items.join("")}
-  </div>
+  </div>` : ""}
   <div class="rows"><button class="row" data-go="grownups"><span class="ico">🔒</span><span class="txt"><b>Grown-ups</b><small>For ${PARENT_NAME}</small></span></button></div>`;
 }
 function gamesView() {
@@ -2671,14 +2803,15 @@ function lessonView() {
 function lessonDoneView() {
   const r = S.round, s = r.summary, L = r.lv ? LEVELS[r.lv - 1] : null, topic = S.ctx && S.ctx.type === "topic" ? TOPICS.find((t) => t.id === S.ctx.id) : null;
   const list = topic ? topicLessons(topic) : L ? L.lessons : [], nextLs = r.boss ? null : list[list.findIndex((x) => x.id === r.lesson) + 1];
-  const back = topic ? `<button class="btn" data-topic="${topic.id}">${topic.ico} ${esc(topic.name)}</button>` : L ? `<button class="btn" data-level="${L.n}">Level ${L.n} ▶</button>` : `<button class="btn" data-go="games">Topics ▶</button>`;
+  const back = S.ctx && S.ctx.type === "times" ? `<button class="btn" data-go="times">🧮 Times tables</button>` : topic ? `<button class="btn" data-topic="${topic.id}">${topic.ico} ${esc(topic.name)}</button>` : L ? `<button class="btn" data-level="${L.n}">Level ${L.n} ▶</button>` : `<button class="btn" data-go="games">Topics ▶</button>`;
   const st = r.boss ? 0 : lessonStars({ n: s.right, of: r.games.length });
   return `<section class="done"><span class="star">${r.boss ? (s.pass ? "⚡" : "💪") : st === 3 ? "🌟" : "⭐"}</span>
-  <h1>${r.boss ? (s.pass ? "Challenge passed!" : "Good try!") : "Lesson done!"}</h1>
+  <h1>${r.boss ? (s.pass ? "Challenge passed!" : "Good try!") : s.secs ? "Speed round done!" : r.lesson.startsWith("ttp.") ? "Practice done!" : "Lesson done!"}</h1>
   <p>${s.right} of ${r.games.length} right on the first try.</p>
+  ${s.secs ? `<div class="how" style="text-align:center"><div>⏱️ <b>${s.secs} seconds</b>${s.best === s.secs ? " · New best! 🏅" : ` · Best: ${s.best} seconds`}</div></div>` : ""}
   ${r.boss ? "" : `<div class="lstars">${"★".repeat(st)}${"☆".repeat(3 - st)}</div>`}
   ${s.gained ? `<div class="how" style="text-align:center"><div>⭐ <b>+${s.gained} stars!</b></div></div>` : ""}
-  ${!r.boss && !L && passed(r.lesson) ? `<p>✅ Passed! It counts on your adventure map too.</p>` : ""}
+  ${!r.boss && !L && passed(r.lesson) && Object.values(LIB).some((ids) => ids.includes(r.lesson)) ? `<p>✅ Passed! It counts on your adventure map too.</p>` : ""}
   <div class="btns">${nextLs ? `<button class="btn" data-lesson="${nextLs.id}">Next lesson ▶</button>` : back}
   <button class="btn soft" data-${r.boss ? "boss" : "lpractice"}="${r.boss ? L.n : r.lesson}">Try again 🔁</button>
   <button class="btn soft" data-go="home">My adventure 🗺️</button></div></section>`;
@@ -2729,11 +2862,13 @@ function render() {
   else if (S.view === "placed") app.innerHTML = placedView();
   else if (S.view === "flash") app.innerHTML = flashView();
   else if (S.view === "flashmenu") app.innerHTML = flashMenuView();
+  else if (S.view === "times") app.innerHTML = timesView();
+  else if (S.view === "ttchart") app.innerHTML = ttChartView();
   else app.innerHTML = mapView(t);
   if (S.view === "play") renderDots();
   window.scrollTo(0, 0);
   // On the map, bring his current level into view.
-  if (S.view === "home") { const n = $(".node.cur") || $(".node.open"); if (n && n.getBoundingClientRect().bottom > innerHeight - 40) n.scrollIntoView({ block: "center" }); }
+  if (S.view === "home" && S.advOpen) { const n = $(".node.cur") || $(".node.open"); if (n && n.getBoundingClientRect().bottom > innerHeight - 40) n.scrollIntoView({ block: "center" }); }
   // Off the home screen, keep one extra history step so Safari's own back swipe goes back one screen, not out of the app.
   if (S.view !== "home" && !(history.state && history.state.hgt)) try { history.pushState({ hgt: 1 }, ""); } catch { /* the browser limits how often this can run */ }
 }
@@ -2866,6 +3001,7 @@ document.addEventListener("click", async (e) => {
       try { await ensureData("stories"); } catch { toast("The stories didn’t load. Check the internet."); return; }
       S.view = "stories"; S.round = null; render(); return;
     }
+    if (v === "times" || v === "ttchart") { S.view = v; S.round = null; render(); if (v === "times") say("Times tables! Pick a table to learn or practice."); return; }
     if (v === "home" || v === "rewards" || v === "grownups" || v === "voices" || v === "games" || v === "trophies" || v === "flashmenu") { S.view = v; S.round = null; render(); if (v === "trophies") say(`Your trophy room! You finished ${plural(tally().adv.levels, "level", "levels")}.`); if (v === "rewards") say(`You have ${plural(tally().balance, "star", "stars")}!`); return; }
     startRound(v);
     return;
@@ -2890,6 +3026,8 @@ document.addEventListener("click", async (e) => {
   }
   const fpath = e.target.closest(".map.tap path[data-i]");
   if (fpath && S.view === "flash" && S.flash.mode === "explore") { flashTap(+fpath.dataset.i); return; }
+  const ttc = e.target.closest("[data-tt]");
+  if (ttc) { const [a, b] = ttc.dataset.tt.split(",").map(Number); S.chart = { a, b }; render(); say(`${a} times ${b} is ${a * b}.`); return; }
   const tp = e.target.closest("[data-topic]");
   if (tp) { const t = TOPICS.find((x) => x.id === tp.dataset.topic); if (!t) return; S.topic = t.id; S.view = "topic"; S.round = null; render(); say(`${t.name}! Pick a lesson.`); return; }
   const lsb = e.target.closest("[data-lesson],[data-lpractice],[data-boss]");
@@ -2897,6 +3035,7 @@ document.addEventListener("click", async (e) => {
     // Where the lesson was opened from decides where "back" and "next lesson" go.
     if (S.view === "level") S.ctx = { type: "level", n: S.level };
     if (S.view === "topic") S.ctx = { type: "topic", id: S.topic };
+    if (S.view === "times") S.ctx = { type: "times" };
     if (lsb.dataset.lesson) openLesson(lsb.dataset.lesson);
     else if (lsb.dataset.lpractice) startLessonRound(lsb.dataset.lpractice);
     else startBoss(+lsb.dataset.boss);
@@ -2948,12 +3087,13 @@ document.addEventListener("click", async (e) => {
     if (a === "repeat") { if (S.round.q.clips) speak(S.round.q.clips); else say(S.round.q.say); }
     if (a === "readpage") { const st = R().stories.find((x) => x.id === S.story.id), i = S.story.page; speak([lineItem(`t-${st.id}-${i}`, st.pages[i][0])]); }
     if (a === "soundout") speak(S.round.q.sounds.map((g) => sndItem(g.k, 0.45)));
-    if (a === "quitlesson") { S.view = S.ctx && S.ctx.type === "topic" ? "topic" : "level"; S.lesson = null; render(); }
+    if (a === "quitlesson") { S.view = S.ctx && S.ctx.type === "times" ? "times" : S.ctx && S.ctx.type === "topic" ? "topic" : "level"; S.lesson = null; render(); }
     if (a === "place") startPlacement();
     if (a === "hearslide") speakSlide();
     if (a === "slprev" && S.lesson.i > 0) { S.lesson.i--; Object.assign(S.lesson, { tapped: new Set(), marks: new Map(), total: 0 }); render(); speakSlide(); }
     if (a === "slnext") { if (S.lesson.i + 1 < S.lesson.slides.length) { S.lesson.i++; Object.assign(S.lesson, { tapped: new Set(), marks: new Map(), total: 0 }); render(); speakSlide(); } else startLessonRound(S.lesson.id); }
-    if (a === "quit" && S.round.lesson) { S.view = S.ctx && S.ctx.type === "topic" && !S.round.boss ? "topic" : "level"; S.round = null; render(); return; }
+    if (a === "quit" && S.round.lesson) { S.view = S.ctx && S.ctx.type === "times" && !S.round.boss ? "times" : S.ctx && S.ctx.type === "topic" && !S.round.boss ? "topic" : "level"; S.round = null; render(); return; }
+    if (a === "advtoggle") { S.advOpen = !S.advOpen; try { localStorage.setItem("hgt-adv", S.advOpen ? "open" : "closed"); } catch { /* storage blocked */ } render(); return; }
     if (a === "quit") { if (S.round.mode === "today" && S.round.results.length) modal(`<span class="em">🛑</span><h2>Stop Today's 5?</h2>`, () => { S.view = "home"; S.round = null; render(); }); else { S.view = "home"; S.round = null; render(); } }
     if (a === "logout") modal(`<span class="em">👋</span><h2>Log out?</h2>`, async () => { await fetch("/api/logout", { method: "POST" }).catch(() => {}); location.href = "/login"; });
     if (a === "cleartest") modal(`<span class="em">🧪</span><h2>Clear all test data?</h2>`, async () => { await fetch("/api/db", { method: "DELETE" }); location.reload(); });
@@ -3042,7 +3182,7 @@ paintTheme();
 // The home-screen app has no back swipe or pull-to-refresh of its own, so the app adds them.
 // Swipe from the left edge: back one screen (not during a game; the ✕ button does that). Swipe sideways on a story: turn the page.
 // Pull down at the top: refresh (not during a game). In Safari, its own back swipe goes back one screen.
-const BACK = { done: "home", rewards: "home", grownups: "home", voices: "grownups", stories: "home", story: "stories", games: "home", trophies: "home", level: "home", lesson: "level", lessondone: "level", levelup: "home", topic: "games", placed: "home", flash: "flashmenu", flashmenu: "games" };
+const BACK = { done: "home", rewards: "home", grownups: "home", voices: "grownups", stories: "home", story: "stories", games: "home", trophies: "home", level: "home", lesson: "level", lessondone: "level", levelup: "home", topic: "games", placed: "home", times: "home", ttchart: "times", flash: "flashmenu", flashmenu: "games" };
 const EDGE = 28;
 const standalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
 const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -3050,6 +3190,7 @@ function goBack() {
   let to = BACK[S.view];
   if (!to) return false;
   if ((S.view === "lesson" || S.view === "lessondone") && S.ctx && S.ctx.type === "topic") to = "topic";
+  if ((S.view === "lesson" || S.view === "lessondone") && S.ctx && S.ctx.type === "times") to = "times";
   if (S.view === "done" || S.view === "lessondone" || S.view === "levelup") S.round = null;
   S.view = to; render();
   return true;
