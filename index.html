@@ -320,19 +320,31 @@ button.fcard { cursor: pointer; }
 .fact span { font-size: 1.02rem; color: var(--muted); font-weight: 700; }
 .fact p { margin: 6px 0 0; font-size: 1.15rem; font-weight: 700; }
 /* times tables */
-.row.feature { background: var(--sky-soft); border-color: var(--sky); margin-bottom: 12px; }
+.row.feature { background: linear-gradient(100deg, #FFE1E4, #FFE9CC, #FFF6C2, #E1F5D0, #D6F0F5, #E2E2FB, #F3DDF8); border-color: #F2B8C6; margin-bottom: 12px; color: #2B2118; }
+.row.feature small, .row.feature .lv { color: #5A4A3C; }
+.rainbow { background: linear-gradient(90deg, #E63946, #F77F00, #E0A800, #23864A, #1D8FB0, #5B5BD6, #D63AAF); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.ttstrip { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin: -4px 0 20px; }
+.ttstrip button { border: 0; border-radius: 14px; padding: 8px 0; background: var(--tc); color: #fff; font: inherit; font-weight: 800; font-size: 1.15rem; box-shadow: 0 4px 0 color-mix(in srgb, var(--tc) 70%, #000); }
+.ttstrip button:active { transform: translateY(3px); box-shadow: none; }
+.row.tt { border-left: 8px solid var(--tc); background: color-mix(in srgb, var(--tc) 7%, var(--surface)); }
+.row.tt .ico.ttn { background: var(--tc); color: #fff; border-color: transparent; }
+.row.tt .tbtns .mini:not(.soft) { background: var(--tc); color: #fff; }
+.row.tt .tbtns .mini.soft { border-color: var(--tc); }
+.ttseq span { margin: 0 .12em; }
+.ttbadge { justify-self: center; background: var(--tc); color: #fff; font-weight: 800; font-size: 2.2rem; border-radius: 18px; padding: 2px 18px; }
 .row.feature .ico { font-size: 2.4rem; }
 .ico.ttn { font-size: 1.3rem; font-weight: 800; color: var(--brand); background: var(--bg); border: 2px solid var(--line); border-radius: 14px; width: 52px; height: 46px; display: grid; place-items: center; }
 .arr.sm { font-size: clamp(1rem, 4.6vw, 1.4rem); gap: 2px 4px; }
 .ttlist { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 20px; font-size: clamp(1.15rem, 5vw, 1.5rem); font-weight: 700; }
-.ttlist b { color: var(--brand); }
+.ttlist b { color: var(--tc, var(--brand)); }
 .ttfact { text-align: center; font-size: 2rem; font-weight: 800; margin: 4px 0 10px; min-height: 2.6rem; }
 .ttfact b { color: var(--brand); }
 .ttgrid { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 1px; width: 100%; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
 .ttgrid > * { aspect-ratio: 1; min-width: 0; overflow: hidden; display: grid; place-items: center; font-size: clamp(.5rem, 2.55vw, .95rem); font-weight: 700; border-radius: 4px; }
-.ttgrid .h { background: var(--ink); color: var(--bg); font-weight: 800; }
-.ttgrid .h.on { background: var(--brand); color: #fff; }
-.ttgrid button { border: 0; padding: 0; background: var(--surface); color: var(--ink); font-family: inherit; font-weight: 700; }  /* keep the small grid size (font: inherit would reset it) */
+.ttgrid .h { background: var(--tc, var(--ink)); color: #fff; font-weight: 800; }
+.ttgrid .h.on { outline: 3px solid var(--ink); outline-offset: -3px; }
+.ttgrid .h.x { color: var(--bg); }
+.ttgrid button { border: 0; padding: 0; background: color-mix(in srgb, var(--tc) 14%, var(--surface)); color: var(--ink); font-family: inherit; font-weight: 700; }  /* keep the small grid size (font: inherit would reset it) */
 .ttgrid button.path { background: var(--sun); color: #2B2118; }
 .ttgrid button.pick { background: var(--brand); color: #fff; transform: scale(1.15); }
 /* trophy room */
@@ -2160,6 +2172,9 @@ const usTour = () => [
 // ---------- times tables section ----------
 // A lesson and a practice game for every table 1 to 12, plus "What is multiplying?", mixed practice, a speed round, and a chart.
 const TT_MAX = 12;
+// Each table has its own color, used on its row, its lesson pages, and the chart (a rainbow from ×1 to ×12).
+const TT_COL = ["#E63946", "#F77F00", "#E0A800", "#7CB518", "#23864A", "#2A9D8F", "#1D8FB0", "#3A6FE0", "#5B5BD6", "#8E5CF0", "#D63AAF", "#E63973"];
+const ttCol = (n) => TT_COL[(n - 1) % TT_COL.length];
 const TT_TIP = {
   1: "Anything times 1 is itself. 1 × 7 = 7.", 2: "Times 2 means double it! 2 × 6 is 6 + 6 = 12.",
   3: "Count by 3s: 3, 6, 9, 12, 15, 18. Clap on every third number!", 4: "Times 4 is double, then double again. 4 × 6: double 6 is 12, double 12 is 24.",
@@ -2210,10 +2225,10 @@ const ttMixTypes = (n) => ["fact", "fact", "turn", "missing", "skip", "word", ..
 function ttSlides(N) {
   const em = TT_EM[N], top = N >= 11 ? 9 : TT_MAX, seq = Array.from({ length: 10 }, (_, i) => N * (i + 1));
   return [
-    T.show(`<div class="bignum">${seq.slice(0, 5).join(" ")}<br>${seq.slice(5).join(" ")}</div>`, `The ${N} times table is counting by ${N}s: ${seq.join(", ")}.`),
+    T.show(`<div class="bignum ttseq">${seq.map((v, i) => `<span style="color:${ttCol(i + 1)}">${v}</span>`).join(" ")}</div>`, `The ${N} times table is counting by ${N}s: ${seq.join(", ")}.`),
     ...[1, 2, 3].map((k) => T.show(ttArr(k, N, em), `${plural(k, "group", "groups")} of ${N} is ${k * N}. We write it ${k} × ${N} = ${k * N}.`)),
-    T.show(`<div class="flagbig">💡</div>`, TT_TIP[N]),
-    T.show(`<div class="ttlist">${Array.from({ length: top }, (_, i) => `<span>${N} × ${i + 1} = <b>${N * (i + 1)}</b></span>`).join("")}</div>`, `Here's the whole ${N} times table. Say it out loud with me!`, { say: Array.from({ length: top }, (_, i) => `${N} times ${i + 1} is ${N * (i + 1)}.`).join(" ") }),
+    T.show(`<div class="ttbadge" style="--tc:${ttCol(N)}">×${N}</div><div class="flagbig">💡</div>`, TT_TIP[N]),
+    T.show(`<div class="ttlist" style="--tc:${ttCol(N)}">${Array.from({ length: top }, (_, i) => `<span>${N} × ${i + 1} = <b>${N * (i + 1)}</b></span>`).join("")}</div>`, `Here's the whole ${N} times table. Say it out loud with me!`, { say: Array.from({ length: top }, (_, i) => `${N} times ${i + 1} is ${N * (i + 1)}.`).join(" ") }),
     T.show(`<div class="eq">${N} × 3 = 3 × ${N}</div>`, `You can swap the numbers and the answer stays the same. ${N} × 3 and 3 × ${N} are both ${3 * N}.`),
     T.show(`<div class="flagbig">✏️</div>`, `Now let's practice the ${N} times table!`)];
 }
@@ -2236,13 +2251,14 @@ const TT_PRACTICE = [
 function timesView() {
   const ls = S.data.lessons || {}, stars = (id) => { const st = lessonStars(ls[id]); return st ? "★".repeat(st) + "☆".repeat(3 - st) : "☆☆☆"; };
   const sp = ls["ttp.speed"];
-  return `<section class="lvhead"><div class="lvem">🧮</div><h1>Times Tables</h1><p>Learn each table, then practice it!</p></section>
+  return `<section class="lvhead"><div class="lvem">🧮</div><h1 class="rainbow">Times Tables</h1><p>Learn each table, then practice it!</p></section>
+  <div class="ttstrip">${Array.from({ length: TT_MAX }, (_, i) => i + 1).map((N) => `<button style="--tc:${ttCol(N)}" data-lesson="tt.${N}" aria-label="The ${N} times table">×${N}</button>`).join("")}</div>
   <div class="rows">
     <button class="row" data-lesson="tt.intro"><span class="ico">🤔</span><span class="txt"><b>What is multiplying?</b><small>Start here</small></span><span class="lv"><i>${stars("tt.intro")}</i>Learn ▶</span></button>
     <button class="row" data-go="ttchart"><span class="ico">📊</span><span class="txt"><b>Times table chart</b><small>Tap any square to see and hear the fact</small></span></button>
   </div>
   <h2>Learn and practice each table</h2>
-  <div class="rows">${Array.from({ length: TT_MAX }, (_, i) => i + 1).map((N) => `<div class="row topic"><span class="ico ttn">×${N}</span><span class="txt"><b>The ${N} times table</b><small>Lesson ${stars(`tt.${N}`)} · Practice ${stars(`ttp.${N}`)}</small></span>
+  <div class="rows">${Array.from({ length: TT_MAX }, (_, i) => i + 1).map((N) => `<div class="row topic tt" style="--tc:${ttCol(N)}"><span class="ico ttn">×${N}</span><span class="txt"><b>The ${N} times table</b><small>Lesson ${stars(`tt.${N}`)} · Practice ${stars(`ttp.${N}`)}</small></span>
     <span class="tbtns"><button class="mini" data-lesson="tt.${N}">📘 Learn</button><button class="mini soft" data-lpractice="ttp.${N}">🎮 Practice</button></span></div>`).join("")}</div>
   <h2>Challenges</h2>
   <div class="rows">
@@ -2253,11 +2269,11 @@ function timesView() {
 }
 function ttChartView() {
   const c = S.chart || { a: 0, b: 0 }, n = TT_MAX;
-  let g = `<div class="ttgrid" style="--n:${n + 1}"><span class="h">×</span>`;
-  for (let b = 1; b <= n; b++) g += `<span class="h${b === c.b ? " on" : ""}">${b}</span>`;
+  let g = `<div class="ttgrid" style="--n:${n + 1}"><span class="h x">×</span>`;
+  for (let b = 1; b <= n; b++) g += `<span class="h${b === c.b ? " on" : ""}" style="--tc:${ttCol(b)}">${b}</span>`;
   for (let a = 1; a <= n; a++) {
-    g += `<span class="h${a === c.a ? " on" : ""}">${a}</span>`;
-    for (let b = 1; b <= n; b++) g += `<button data-tt="${a},${b}" class="${a === c.a && b === c.b ? "pick" : (a === c.a && b <= c.b) || (b === c.b && a <= c.a) ? "path" : ""}">${a * b}</button>`;
+    g += `<span class="h${a === c.a ? " on" : ""}" style="--tc:${ttCol(a)}">${a}</span>`;
+    for (let b = 1; b <= n; b++) g += `<button data-tt="${a},${b}" style="--tc:${ttCol(a)}" class="${a === c.a && b === c.b ? "pick" : (a === c.a && b <= c.b) || (b === c.b && a <= c.a) ? "path" : ""}">${a * b}</button>`;
   }
   return `<h2 style="margin-top:6px">📊 Times table chart</h2><p class="storytitle" style="text-align:left;margin-bottom:10px">Tap a square. Its row and column light up.</p>
   <div class="ttfact">${c.a ? `${c.a} × ${c.b} = <b>${c.a * c.b}</b>` : "Tap any square!"}</div>${g}</div>`;
