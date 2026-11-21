@@ -1,5 +1,5 @@
 #!/bin/sh
-# Deploy to production on the hademolab Pro team.
+# Deploy to production on the personal team (hanguyen-8346s-projects).
 # Deploys from a copy WITHOUT .git: when git info is attached, Vercel Pro blocks the deploy
 # ("commit author doesn't have permission", TEAM_ACCESS_REQUIRED) because the Mac's commit email isn't a team member.
 set -e
@@ -12,4 +12,4 @@ if [ "$(git -C "$APP" rev-list --count origin/main..HEAD)" != "0" ]; then echo "
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 rsync -a --exclude .git --exclude node_modules --exclude audio-samples --exclude backups --exclude '.env*' "$APP/" "$TMP/"
-cd "$TMP" && vercel deploy --prod --yes --scope hademolab
+cd "$TMP" && vercel deploy --prod --yes --scope hanguyen-8346s-projects

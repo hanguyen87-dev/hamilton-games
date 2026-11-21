@@ -106,3 +106,5 @@ Same as SAT Daily Ten, no framework, no build step: `index.html` (the whole app)
 - Home → 🧮 Times Tables (`timesView`): "What is multiplying?", a tappable 12 × 12 chart (`ttChartView`), a lesson (`tt.N`: skip counting, groups, the table's trick, the whole table, turnaround) and a practice game (`ttp.N`, 10 questions) for every table 1 to 12, Mixed practice (`ttp.mix`), a timed Speed round (`ttp.speed`, best time saved as `best` seconds), and flashcards (2 to 12).
 - Question maker `GEN.times` (types fact, turn, missing, skip, array, word); also a free-play game in Games and the Times tables topic in Learn and play.
 - The Level 1 to 20 map on the home screen is collapsed by default behind "My adventure · Show" (remembered per device in localStorage `hgt-adv`).
+
+> 2026-11-20: moved back from the hademolab Pro team to the personal team (hanguyen-8346s-projects). Deploy with `--scope hanguyen-8346s-projects`.
